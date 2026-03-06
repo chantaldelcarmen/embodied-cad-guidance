@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expert - Motion Capture</title>
+</head>
+<body>
+  <h1>Expert Mode</h1>
+  <button id="startBtn">Start Motion Capture</button>
+  <div id="status">Ready</div>
+  <div id="data"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const startBtn = document.getElementById('startBtn');
+    const status = document.getElementById('status');
+    const dataDiv = document.getElementById('data');
+
+    startBtn.addEventListener('click', async () => {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          const permission = await DeviceOrientationEvent.requestPermission();
+          if (permission === 'granted') {
+            startListening();
+          } else {
+            status.textContent = 'Permission denied';
+          }
+        } catch (error) {
+          status.textContent = 'Error: ' + error.message;
+        }
+      } else {
+        startListening();
+      }
+    });
+
+    function startListening() {
+      status.textContent = 'Streaming motion data...';
+      startBtn.disabled = true;
+
+      window.addEventListener('deviceorientation', (event) => {
+        const data = {
+          alpha: event.alpha?.toFixed(1),
+          beta: event.beta?.toFixed(1),
+          gamma: event.gamma?.toFixed(1)
+        };
+        
+        socket.emit('motion-data', data);
+        dataDiv.textContent = `α: ${data.alpha}° β: ${data.beta}° γ: ${data.gamma}°`;
+      });
+    }
+  </script>
+</body>
+</html>
