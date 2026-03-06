@@ -23,9 +23,11 @@ io.on("connection", (socket) => {
   });
 });
 
-console.log("About to start listening on port 3000...");
+const PORT = process.env.PORT || 3000;
 
-server.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+console.log(`About to start listening on port ${PORT}...`);
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
   console.log("Press Ctrl+C to stop");
 });
