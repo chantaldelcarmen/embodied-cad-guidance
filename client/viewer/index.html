@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viewer - Motion Display</title>
+</head>
+<body>
+  <h1>Viewer Mode</h1>
+  <div id="status">Waiting for motion data...</div>
+  <div id="data" style="font-size: 24px; margin-top: 20px;"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const status = document.getElementById('status');
+    const dataDiv = document.getElementById('data');
+
+    socket.on('motion-data', (data) => {
+      status.textContent = 'Receiving data';
+      dataDiv.innerHTML = `
+        <div>Alpha: ${data.alpha}°</div>
+        <div>Beta: ${data.beta}°</div>
+        <div>Gamma: ${data.gamma}°</div>
+      `;
+    });
+
+    socket.on('connect', () => {
+      console.log('Connected to server');
+    });
+  </script>
+</body>
+</html>
