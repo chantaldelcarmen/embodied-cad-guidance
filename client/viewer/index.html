@@ -3,30 +3,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Viewer - Motion Display</title>
+  <title>Viewer - 3D Scene</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #ui-overlay {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: monospace;
+      z-index: 1000;
+    }
+    #status { font-weight: bold; margin-bottom: 10px; }
+    #data { font-size: 14px; }
+  </style>
 </head>
 <body>
-  <h1>Viewer Mode</h1>
-  <div id="status">Waiting for motion data...</div>
-  <div id="data" style="font-size: 24px; margin-top: 20px;"></div>
+  <!-- UI Overlay -->
+  <div id="ui-overlay">
+    <div id="status">Waiting for motion data...</div>
+    <div id="data"></div>
+  </div>
 
+  <!-- A-Frame Scene -->
+  <a-scene>
+    <!-- Sky -->
+    <a-sky color="#87CEEB"></a-sky>
+
+    <!-- Lighting -->
+    <a-light type="ambient" color="#BBB"></a-light>
+    <a-light type="directional" color="#FFF" intensity="0.6" position="2 4 3"></a-light>
+
+    <!-- Ground plane -->
+    <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" color="#7BC8A4"></a-plane>
+
+    <!-- Simple 3D model (box for now) -->
+    <a-box id="model" position="0 1 -3" rotation="0 45 0" color="#4CC3D9" 
+           shadow="cast: true; receive: true">
+    </a-box>
+
+    <!-- Additional test objects -->
+    <a-cylinder position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
+    <a-sphere position="-2 1.25 -3" radius="0.5" color="#EF2D5E"></a-sphere>
+
+    <!-- Camera -->
+    <a-entity id="camera-rig" position="0 0 0">
+      <a-camera id="camera" position="0 1.6 0"></a-camera>
+    </a-entity>
+  </a-scene>
+
+  <!-- Socket.io for receiving motion data -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const status = document.getElementById('status');
     const dataDiv = document.getElementById('data');
+    const cameraRig = document.querySelector('#camera-rig');
 
     socket.on('motion-data', (data) => {
-      status.textContent = 'Receiving data';
+      status.textContent = 'Receiving motion data';
       dataDiv.innerHTML = `
-        <div>Alpha: ${data.alpha}°</div>
-        <div>Beta: ${data.beta}°</div>
-        <div>Gamma: ${data.gamma}°</div>
+        Alpha: ${data.alpha}°<br>
+        Beta: ${data.beta}°<br>
+        Gamma: ${data.gamma}°
       `;
+
+      // Update camera rotation based on phone orientation
+      if (cameraRig && data.alpha !== null && data.beta !== null && data.gamma !== null) {
+        // Convert device orientation to A-Frame rotation
+        // This is a basic mapping - we'll refine it
+        const rotation = {
+          x: parseFloat(data.beta) || 0,
+          y: parseFloat(data.alpha) || 0,
+          z: parseFloat(data.gamma) || 0
+        };
+        
+        cameraRig.setAttribute('rotation', `${rotation.x} ${rotation.y} ${rotation.z}`);
+      }
     });
 
     socket.on('connect', () => {
       console.log('Connected to server');
+      status.textContent = 'Connected - waiting for motion data';
     });
   </script>
 </body>
