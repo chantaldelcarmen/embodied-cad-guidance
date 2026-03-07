@@ -143,9 +143,21 @@
     const startBtn = document.getElementById('startBtn');
     const status = document.getElementById('status');
     const dataDiv = document.getElementById('data');
-    const scene = document.querySelector('a-scene');
-    const cameraRig = document.getElementById('camera-rig');
     const tapHint = document.getElementById('tap-hint');
+    let scene = null;
+    let cameraRig = null;
+
+    // Wait for A-Frame to load
+    document.addEventListener('DOMContentLoaded', () => {
+      scene = document.querySelector('a-scene');
+      if (scene.hasLoaded) {
+        cameraRig = document.getElementById('camera-rig');
+      } else {
+        scene.addEventListener('loaded', () => {
+          cameraRig = document.getElementById('camera-rig');
+        });
+      }
+    });
 
     startBtn.addEventListener('click', async () => {
       if (typeof DeviceOrientationEvent.requestPermission === 'function') {
