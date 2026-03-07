@@ -190,15 +190,10 @@
       let currentRotation = { x: 0, y: 0, z: 0 };
       const smoothingFactor = 0.3; // Lower = smoother but more lag
       
-      // Pre-filter state for alpha (low-pass to kill magnetometer instability on upward tilt)
+      // Alpha freeze: hold last stable alpha when tilted up (magnetometer unreliable above threshold)
       let smoothedAlpha = null;
-      const alphaSmoothing = 0.1;
-      let stableAlpha = 0; // Track stable alpha for gimbal lock prevention
-      // Direction-consistency filter: only update alpha if movement is sustained in one direction
-      let lastRawAlpha = null;
-      let lastAlphaDeltaSign = 0;
-      let consistentFrames = 0;
-      const CONSISTENT_FRAMES_REQUIRED = 4; // ~200ms at 20fps
+      const alphaSmoothing = 0.3;
+      const ALPHA_FREEZE_THRESHOLD = 8; // degrees beta above which alpha is frozen
       
       // Calibration: capture initial orientation as neutral position
       let initialAlpha = null;
@@ -229,41 +224,17 @@
         if (alpha > 180) alpha -= 360;
         if (alpha < -180) alpha += 360;
 
-        // Alpha filtering: direction-consistency filter only in unstable upward-tilt zone (beta > 8deg)
-        // Below that, use direct EMA for fast responsive tracking
-        if (smoothedAlpha === null) { smoothedAlpha = alpha; lastRawAlpha = alpha; }
-        let rawDelta = alpha - lastRawAlpha;
-        if (rawDelta > 180) rawDelta -= 360;
-        if (rawDelta < -180) rawDelta += 360;
-        lastRawAlpha = alpha;
-
-        if (beta > 5) {
-          // Unstable zone: require sustained direction before updating to block oscillation
-          const currentSign = Math.abs(rawDelta) < 1 ? lastAlphaDeltaSign : Math.sign(rawDelta);
-          if (currentSign === lastAlphaDeltaSign) {
-            consistentFrames++;
-          } else {
-            consistentFrames = 0;
-          }
-          lastAlphaDeltaSign = currentSign;
-          if (consistentFrames >= CONSISTENT_FRAMES_REQUIRED) {
-            let alphaDelta = alpha - smoothedAlpha;
-            if (alphaDelta > 180) alphaDelta -= 360;
-            if (alphaDelta < -180) alphaDelta += 360;
-            smoothedAlpha += alphaDelta * alphaSmoothing;
-            if (smoothedAlpha > 180) smoothedAlpha -= 360;
-            if (smoothedAlpha < -180) smoothedAlpha += 360;
-          }
-        } else {
-          // Normal zone: direct EMA with higher factor for responsive tracking
-          consistentFrames = 0;
+        // Alpha freeze: when tilted up, hold last stable alpha to prevent magnetometer drift
+        if (smoothedAlpha === null) smoothedAlpha = alpha;
+        if (beta <= ALPHA_FREEZE_THRESHOLD) {
           let alphaDelta = alpha - smoothedAlpha;
           if (alphaDelta > 180) alphaDelta -= 360;
           if (alphaDelta < -180) alphaDelta += 360;
-          smoothedAlpha += alphaDelta * 0.3;
+          smoothedAlpha += alphaDelta * alphaSmoothing;
           if (smoothedAlpha > 180) smoothedAlpha -= 360;
           if (smoothedAlpha < -180) smoothedAlpha += 360;
         }
+        // else: beta above threshold — smoothedAlpha frozen at last stable value
         alpha = smoothedAlpha;
 
         // Suppress alpha changes near gimbal lock to prevent ping-ponging
