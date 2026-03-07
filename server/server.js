@@ -21,6 +21,11 @@ io.on("connection", (socket) => {
   socket.on("motion-data", (data) => {
     socket.broadcast.emit("motion-data", data);
   });
+
+  socket.on("highlight", (data) => {
+    console.log("Highlight event:", data.object);
+    socket.broadcast.emit("highlight", data);
+  });
 });
 
 const PORT = process.env.PORT || 3000;

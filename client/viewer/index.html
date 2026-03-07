@@ -42,13 +42,13 @@
     <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" color="#7BC8A4"></a-plane>
 
     <!-- Simple 3D model (box for now) -->
-    <a-box id="model" position="0 1 -3" rotation="0 45 0" color="#4CC3D9" 
+    <a-box id="box" position="0 1 -3" rotation="0 45 0" color="#4CC3D9" 
            shadow="cast: true; receive: true">
     </a-box>
 
     <!-- Additional test objects -->
-    <a-cylinder position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
-    <a-sphere position="-2 1.25 -3" radius="0.5" color="#EF2D5E"></a-sphere>
+    <a-cylinder id="cylinder" position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
+    <a-sphere id="sphere" position="-2 1.25 -3" radius="0.5" color="#EF2D5E"></a-sphere>
 
     <!-- Camera -->
     <a-entity id="camera-rig" position="0 0 0">
@@ -89,6 +89,38 @@
     socket.on('connect', () => {
       console.log('Connected to server');
       status.textContent = 'Connected - waiting for motion data';
+    });
+
+    // Store original colors
+    const originalColors = {
+      box: '#4CC3D9',
+      cylinder: '#FFC65D',
+      sphere: '#EF2D5E'
+    };
+
+    // Listen for highlight events
+    socket.on('highlight', (data) => {
+      const objectId = data.object;
+      const object = document.querySelector(`#${objectId}`);
+      
+      if (object) {
+        // Reset all objects to original colors
+        Object.keys(originalColors).forEach(id => {
+          const obj = document.querySelector(`#${id}`);
+          if (obj) {
+            obj.setAttribute('color', originalColors[id]);
+          }
+        });
+        
+        // Highlight the selected object
+        object.setAttribute('color', '#FFFF00'); // Yellow highlight
+        status.textContent = `Highlighting ${objectId}`;
+        
+        // Reset status after 2 seconds
+        setTimeout(() => {
+          status.textContent = 'Receiving motion data';
+        }, 2000);
+      }
     });
   </script>
 </body>
