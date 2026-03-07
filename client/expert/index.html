@@ -188,36 +188,57 @@
       let currentRotation = { x: 0, y: 0, z: 0 };
       const smoothingFactor = 0.3;
 
-      // Gyroscope-integrated heading (no magnetometer - stable at all tilt angles)
-      let headingDeg = 0;
+      // Complementary filter: gyroscope for fast stable tracking, magnetometer for slow drift correction
+      let headingDeg = null;   // initialized from magnetometer on first reading
       let lastMotionTime = null;
+      let magHeading = null;   // calibrated magnetometer heading
+      let initialAlpha = null;
+      const MAG_CORRECTION = 0.02; // magnetometer weight - small to avoid instability
+      const MAG_FREEZE_THRESHOLD = 8; // freeze mag correction above this beta (unstable zone)
 
       // Beta (tilt) from DeviceOrientationEvent - stable via accelerometer/gravity
       let currentBeta = 0;
       let initialBeta = null;
 
-      // DeviceOrientationEvent: calibrate and track beta only
+      // DeviceOrientationEvent: calibrate beta and track magnetometer heading for drift correction
       window.addEventListener('deviceorientation', (event) => {
         if (initialBeta === null && event.beta !== null) {
           initialBeta = event.beta;
+          initialAlpha = event.alpha || 0;
           status.textContent = 'Streaming motion data...';
         }
         if (initialBeta !== null) {
           currentBeta = (event.beta || 0) - initialBeta;
           if (currentBeta > 80) currentBeta = 80;
           if (currentBeta < -80) currentBeta = -80;
+
+          // Calibrated magnetometer heading (absolute reference for drift correction)
+          let rawMag = (event.alpha || 0) - initialAlpha;
+          if (rawMag > 180) rawMag -= 360;
+          if (rawMag < -180) rawMag += 360;
+          magHeading = rawMag;
         }
       });
 
-      // DeviceMotionEvent: integrate gyroscope for heading - immune to magnetometer instability
+      // DeviceMotionEvent: gyroscope integration + slow magnetometer correction
       window.addEventListener('devicemotion', (event) => {
         const now = Date.now();
         if (lastMotionTime !== null && event.rotationRate) {
           const dt = (now - lastMotionTime) / 1000;
-          // rotationRate.gamma = rotation around device Y axis = yaw when phone held upright
+
+          // Gyroscope step: fast and stable
+          if (headingDeg === null) headingDeg = magHeading || 0;
           headingDeg -= event.rotationRate.gamma * dt;
           if (headingDeg > 180) headingDeg -= 360;
           if (headingDeg < -180) headingDeg += 360;
+
+          // Magnetometer correction: only when beta is stable (not in unstable upward-tilt zone)
+          if (magHeading !== null && currentBeta <= MAG_FREEZE_THRESHOLD) {
+            let magDelta = magHeading - headingDeg;
+            if (magDelta > 180) magDelta -= 360;
+            if (magDelta < -180) magDelta += 360;
+            headingDeg += magDelta * MAG_CORRECTION;
+          }
         }
         lastMotionTime = now;
 
