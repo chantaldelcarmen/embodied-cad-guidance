@@ -217,9 +217,9 @@
         if (now - lastUpdate < throttleDelay) return;
         lastUpdate = now;
 
-        // Calculate calibrated values
+        // Calculate calibrated values (relative to starting position)
         let alpha = event.alpha - initialAlpha;
-        let beta = event.beta - initialBeta + 90;
+        let beta = event.beta - initialBeta;
         const gamma = event.gamma;
         
         // Normalize alpha to -180 to 180 range
@@ -249,8 +249,8 @@
           lastAlpha = alpha;
           
           // Clamp beta to prevent gimbal lock
-          if (beta > 60) beta = 60;   // Limit looking up
-          if (beta < -60) beta = -60;  // Limit looking down
+          if (beta > 85) beta = 85;   // Limit looking up
+          if (beta < -85) beta = -85;  // Limit looking down
           
           // Calculate target rotation (calibration offset already applied)
           const targetRotation = {
