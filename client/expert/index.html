@@ -188,14 +188,13 @@
           const beta = parseFloat(data.beta);
           const gamma = parseFloat(data.gamma);
           
-          // Portrait mode orientation mapping
-          // Rotation order matters for proper orientation
-          cameraRig.object3D.rotation.set(
-            THREE.Math.degToRad(beta - 90),  // pitch (tilt up/down)
-            THREE.Math.degToRad(-alpha),     // yaw (turn left/right)  
-            THREE.Math.degToRad(gamma),      // roll (tilt side to side)
-            'YXZ'  // Apply yaw, then pitch, then roll
-          );
+          // Apply rotation
+          cameraRig.setAttribute('rotation', {
+            x: beta - 90,
+            y: -alpha,
+            z: 0  // Ignore gamma for now to keep horizon level
+          });
+        }
         }
       });
 
