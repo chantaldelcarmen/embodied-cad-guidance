@@ -4,12 +4,68 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Expert - Motion Capture</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #startBtn {
+      background: #4CC3D9;
+      color: white;
+    }
+    #startBtn:disabled {
+      background: #BBB;
+    }
+    .highlight-btn {
+      background: #EEE;
+      color: #333;
+    }
+    .highlight-btn:active {
+      background: #FFC65D;
+    }
+    #status {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f0f0f0;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+    #data {
+      margin: 10px 0;
+      font-family: monospace;
+    }
+    .controls {
+      margin-top: 30px;
+    }
+    .controls h2 {
+      font-size: 20px;
+      margin-bottom: 15px;
+    }
+  </style>
 </head>
 <body>
   <h1>Expert Mode</h1>
   <button id="startBtn">Start Motion Capture</button>
   <div id="status">Ready</div>
   <div id="data"></div>
+  
+  <div class="controls" id="controls" style="display: none;">
+    <h2>Highlight Objects</h2>
+    <button class="highlight-btn" onclick="highlightObject('box')">Highlight Box</button>
+    <button class="highlight-btn" onclick="highlightObject('cylinder')">Highlight Cylinder</button>
+    <button class="highlight-btn" onclick="highlightObject('sphere')">Highlight Sphere</button>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -38,6 +94,7 @@
     function startListening() {
       status.textContent = 'Streaming motion data...';
       startBtn.disabled = true;
+      document.getElementById('controls').style.display = 'block';
 
       window.addEventListener('deviceorientation', (event) => {
         const data = {
@@ -49,6 +106,14 @@
         socket.emit('motion-data', data);
         dataDiv.textContent = `α: ${data.alpha}° β: ${data.beta}° γ: ${data.gamma}°`;
       });
+    }
+
+    function highlightObject(objectId) {
+      socket.emit('highlight', { object: objectId });
+      status.textContent = `Highlighted ${objectId}`;
+      setTimeout(() => {
+        status.textContent = 'Streaming motion data...';
+      }, 1000);
     }
   </script>
 </body>
