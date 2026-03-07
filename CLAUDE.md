@@ -22,7 +22,7 @@ HTTPS is required for iPhone motion permission — use the deployed URL on mobil
 ```
 server/server.js          # Express + Socket.io server, no build step
 client/
-  expert/index.html       # Phone UI: captures DeviceOrientation, emits motion-data + highlight
+  expert/index.html       # Phone UI: captures motion, emits motion-data + highlight
   viewer/index.html       # Display UI: receives motion-data + highlight, drives A-Frame camera
 ```
 
@@ -30,11 +30,29 @@ The server is a thin relay — it receives `motion-data` and `highlight` socket 
 
 Both clients share the same A-Frame scene layout (box at `0 1 -3`, cylinder at `2 0.75 -3`, sphere at `-2 1.25 -3`) with identical IDs so highlight events match across both views.
 
-## Key Implementation Details
+## Motion Pipeline (expert → viewer)
 
-**Motion pipeline (expert → viewer):**
-1. Expert calibrates on first `deviceorientation` event (stores `initialAlpha`/`initialBeta` as neutral)
-2. Values are offset by calibration, normalized to ±180°, alpha frozen if `|beta| > 40°` (gimbal lock threshold), beta clamped to ±80° before transmission
-3. Viewer applies the same exponential smoothing (`smoothingFactor = 0.3`) and maps `alpha → y` rotation, `beta → x` rotation on the camera rig
+**Heading (alpha / Y rotation) — complementary filter:**
+- `DeviceOrientationEvent.alpha` (magnetometer) is NOT used directly for heading. The magnetometer requires tilt compensation that becomes numerically unstable at upward tilt angles (~11° beta), causing ping-pong and drift. This is a hardware/OS limitation, not fixable with software filtering alone.
+- Instead, heading is computed via a **complementary filter**:
+  1. Gyroscope (`DeviceMotionEvent.rotationRate.gamma`) is integrated each frame for fast, stable tracking
+  2. A small magnetometer correction (2%/frame, `MAG_CORRECTION = 0.02`) is blended in to cancel long-term gyroscope drift
+  3. Magnetometer correction is **frozen entirely** when `beta > 8°` (`MAG_FREEZE_THRESHOLD`) to prevent tilt-instability leaking in
+- Both `DeviceOrientationEvent` and `DeviceMotionEvent` permissions must be requested separately on iOS
 
-**Highlight:**  Expert taps a `.clickable` A-Frame object or presses a fallback button → emits `{ object: id }` → viewer turns that object yellow, resets others.
+**Tilt (beta / X rotation):**
+- `DeviceOrientationEvent.beta` is used directly — accelerometer/gravity-based, stable at all angles
+- Calibrated on first reading (`initialBeta`), clamped to ±80° before transmission
+
+**Camera rig:**
+- Rig is at `position="0 1.6 0"`, camera at `position="0 0 0"` inside it
+- This is critical: camera must be at the rig's origin so rotation happens in place. If camera is offset from rig origin, tilting causes it to orbit, pushing the view forward in a curve.
+
+**Viewer smoothing:** `smoothingFactor = 0.8` — kept high because expert already smooths; double-smoothing causes lag and requires large phone movements to drive the viewer.
+
+**Highlight:** Expert taps a `.clickable` A-Frame object or presses a fallback button → emits `{ object: id }` → both expert and viewer turn that object yellow, reset others. Objects stay highlighted until another is tapped (no timeout).
+
+## Workflow
+
+- Feature branches → PR → merge to main
+- Tag stable versions (current: `v1.0`)
