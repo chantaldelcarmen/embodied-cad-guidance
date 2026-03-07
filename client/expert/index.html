@@ -204,12 +204,12 @@
           const objectId = obj.id;
           highlightObject(objectId);
           
-          // Visual feedback on expert's screen
+          // Visual feedback on expert's screen (matches viewer duration)
           const originalColor = obj.getAttribute('color');
           obj.setAttribute('color', '#FFFF00');
           setTimeout(() => {
             obj.setAttribute('color', originalColor);
-          }, 300);
+          }, 2000);
         });
       });
     }

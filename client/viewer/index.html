@@ -74,15 +74,11 @@
 
       // Update camera rotation based on phone orientation
       if (cameraRig && data.alpha !== null && data.beta !== null && data.gamma !== null) {
-        // Convert device orientation to A-Frame rotation
-        // This is a basic mapping - we'll refine it
-        const rotation = {
-          x: parseFloat(data.beta) || 0,
-          y: parseFloat(data.alpha) || 0,
-          z: parseFloat(data.gamma) || 0
-        };
-        
-        cameraRig.setAttribute('rotation', `${rotation.x} ${rotation.y} ${rotation.z}`);
+        // Match expert's rotation calculation
+        const rotation = cameraRig.getAttribute('rotation');
+        rotation.y = -parseFloat(data.alpha);
+        rotation.x = parseFloat(data.beta) - 90;
+        cameraRig.setAttribute('rotation', rotation);
       }
     });
 
