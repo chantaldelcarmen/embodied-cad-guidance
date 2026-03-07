@@ -226,7 +226,7 @@
         if (alpha < -180) alpha += 360;
         
         // Suppress alpha changes near gimbal lock to prevent ping-ponging
-        if (Math.abs(beta) > 70) {
+        if (Math.abs(beta) > 40) {
           // Near gimbal lock - freeze alpha at last stable value
           alpha = stableAlpha;
         } else {
@@ -305,7 +305,23 @@
 
     function highlightObject(objectId) {
       socket.emit('highlight', { object: objectId });
-      status.textContent = `Highlighted ${objectId}`;
+      
+      // Highlight on expert's own screen
+      const object = document.querySelector(`#${objectId}`);
+      if (object) {
+        // Reset all objects to their original colors first
+        document.querySelectorAll('.clickable').forEach(obj => {
+          const id = obj.getAttribute('id');
+          if (id === 'box') obj.setAttribute('color', '#4CC3D9');
+          if (id === 'cylinder') obj.setAttribute('color', '#FFC65D');
+          if (id === 'sphere') obj.setAttribute('color', '#EF2D5E');
+        });
+        
+        // Highlight the selected object
+        object.setAttribute('color', '#FFFF00'); // Yellow highlight
+        status.textContent = `Highlighted ${objectId}`;
+      }
+      
       setTimeout(() => {
         status.textContent = 'Streaming motion data...';
       }, 1000);
