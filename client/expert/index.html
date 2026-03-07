@@ -238,9 +238,9 @@
         lastRawAlpha = alpha;
 
         if (beta > 8) {
-          // Unstable zone: require sustained direction before updating to block oscillation
-          const currentSign = Math.abs(rawDelta) < 1 ? lastAlphaDeltaSign : Math.sign(rawDelta);
-          if (currentSign === lastAlphaDeltaSign) {
+          // Unstable zone: require sustained direction AND minimum speed to block slow drift
+          const currentSign = Math.abs(rawDelta) < 2 ? lastAlphaDeltaSign : Math.sign(rawDelta);
+          if (currentSign === lastAlphaDeltaSign && Math.abs(rawDelta) >= 2) {
             consistentFrames++;
           } else {
             consistentFrames = 0;
