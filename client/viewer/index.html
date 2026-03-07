@@ -74,16 +74,18 @@
 
       // Update camera rotation based on phone orientation
       if (cameraRig && data.alpha !== null && data.beta !== null && data.gamma !== null) {
-        // Match expert's rotation calculation with clamping
-        const rotation = cameraRig.getAttribute('rotation');
+        const alpha = parseFloat(data.alpha);
+        const beta = parseFloat(data.beta);
+        const gamma = parseFloat(data.gamma);
         
-        // Clamp beta to prevent gimbal lock (limit tilt range)
-        let beta = parseFloat(data.beta);
-        beta = Math.max(-60, Math.min(60, beta)); // Clamp between -60 and 60
-        
-        rotation.y = -parseFloat(data.alpha);
-        rotation.x = beta - 90;
-        cameraRig.setAttribute('rotation', rotation);
+        // Portrait mode orientation mapping (match expert calculation)
+        // Rotation order matters for proper orientation
+        cameraRig.object3D.rotation.set(
+          THREE.Math.degToRad(beta - 90),  // pitch (tilt up/down)
+          THREE.Math.degToRad(-alpha),     // yaw (turn left/right)
+          THREE.Math.degToRad(gamma),      // roll (tilt side to side)
+          'YXZ'  // Apply yaw, then pitch, then roll
+        );
       }
     });
 
