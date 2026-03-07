@@ -188,7 +188,7 @@
       
       // Smoothing for expert's own view
       let currentRotation = { x: 0, y: 0, z: 0 };
-      const smoothingFactor = 0.15; // Lower = smoother but more lag
+      const smoothingFactor = 0.3; // Lower = smoother but more lag
       
       // Pre-filter state for alpha (low-pass to kill magnetometer instability on upward tilt)
       let smoothedAlpha = null;
@@ -237,7 +237,7 @@
           // Update stable alpha when away from gimbal lock
           stableAlpha = alpha;
         }
-        
+
         // Clamp beta BEFORE sending to prevent gimbal lock
         if (beta > 80) beta = 80;   // Limit looking up
         if (beta < -80) beta = -80;  // Limit looking down
