@@ -100,17 +100,25 @@
     <a-light type="directional" position="-1 1 1" intensity="0.7"></a-light>
 
     <!-- Camera rig for rotation control -->
-    <a-entity id="camera-rig" position="0 1.6 5">
-      <a-camera></a-camera>
+    <a-entity id="camera-rig" position="0 0 0">
+      <a-camera position="0 1.6 0">
+        <!-- Cursor for raycasting on mobile -->
+        <a-cursor 
+          raycaster="objects: .clickable"
+          fuse="false"
+          color="white"
+          opacity="0.5">
+        </a-cursor>
+      </a-camera>
     </a-entity>
 
     <!-- Ground plane -->
     <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" color="#7BC8A4"></a-plane>
 
-    <!-- Interactive objects matching viewer -->
-    <a-box id="box" position="-2 1 0" color="#4CC3D9" class="clickable"></a-box>
-    <a-cylinder id="cylinder" position="0 1 0" color="#FFC65D" class="clickable"></a-cylinder>
-    <a-sphere id="sphere" position="2 1 0" color="#F16745" class="clickable"></a-sphere>
+    <!-- Interactive objects matching viewer (same positions as viewer) -->
+    <a-box id="box" position="0 1 -3" rotation="0 45 0" color="#4CC3D9" class="clickable"></a-box>
+    <a-cylinder id="cylinder" position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D" class="clickable"></a-cylinder>
+    <a-sphere id="sphere" position="-2 1.25 -3" radius="0.5" color="#EF2D5E" class="clickable"></a-sphere>
   </a-scene>
 
   <!-- UI Overlay -->
@@ -188,24 +196,21 @@
     }
 
     function setupRaycasting() {
-      const camera = document.querySelector('a-camera');
+      // Listen for clicks on clickable objects
+      const clickables = document.querySelectorAll('.clickable');
       
-      // Handle touch/click events
-      scene.addEventListener('click', (evt) => {
-        // Get the intersection point
-        const intersectedEl = evt.detail.intersection?.object.el;
-        
-        if (intersectedEl && intersectedEl.classList.contains('clickable')) {
-          const objectId = intersectedEl.id;
+      clickables.forEach(obj => {
+        obj.addEventListener('click', (evt) => {
+          const objectId = obj.id;
           highlightObject(objectId);
           
-          // Visual feedback
-          const originalColor = intersectedEl.getAttribute('color');
-          intersectedEl.setAttribute('color', '#FFFF00');
+          // Visual feedback on expert's screen
+          const originalColor = obj.getAttribute('color');
+          obj.setAttribute('color', '#FFFF00');
           setTimeout(() => {
-            intersectedEl.setAttribute('color', originalColor);
+            obj.setAttribute('color', originalColor);
           }, 300);
-        }
+        });
       });
     }
 
