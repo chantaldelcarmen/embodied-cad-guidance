@@ -194,6 +194,11 @@
       let smoothedAlpha = null;
       const alphaSmoothing = 0.1;
       let stableAlpha = 0; // Track stable alpha for gimbal lock prevention
+      // Direction-consistency filter: only update alpha if movement is sustained in one direction
+      let lastRawAlpha = null;
+      let lastAlphaDeltaSign = 0;
+      let consistentFrames = 0;
+      const CONSISTENT_FRAMES_REQUIRED = 4; // ~200ms at 20fps
       
       // Calibration: capture initial orientation as neutral position
       let initialAlpha = null;
@@ -224,14 +229,28 @@
         if (alpha > 180) alpha -= 360;
         if (alpha < -180) alpha += 360;
 
-        // Pre-filter alpha: low-pass EMA using shortest angular path to avoid wrap-around sweeps
-        if (smoothedAlpha === null) smoothedAlpha = alpha; // initialize without jump
-        let alphaDelta = alpha - smoothedAlpha;
-        if (alphaDelta > 180) alphaDelta -= 360;
-        if (alphaDelta < -180) alphaDelta += 360;
-        smoothedAlpha += alphaDelta * alphaSmoothing;
-        if (smoothedAlpha > 180) smoothedAlpha -= 360;
-        if (smoothedAlpha < -180) smoothedAlpha += 360;
+        // Direction-consistency filter: block alpha updates unless movement is sustained (not oscillating)
+        if (smoothedAlpha === null) { smoothedAlpha = alpha; lastRawAlpha = alpha; }
+        let rawDelta = alpha - lastRawAlpha;
+        if (rawDelta > 180) rawDelta -= 360;
+        if (rawDelta < -180) rawDelta += 360;
+        lastRawAlpha = alpha;
+        const currentSign = Math.abs(rawDelta) < 1 ? lastAlphaDeltaSign : Math.sign(rawDelta);
+        if (currentSign === lastAlphaDeltaSign) {
+          consistentFrames++;
+        } else {
+          consistentFrames = 0;
+        }
+        lastAlphaDeltaSign = currentSign;
+        // Only feed EMA when movement is sustained in one direction (filters oscillation)
+        if (consistentFrames >= CONSISTENT_FRAMES_REQUIRED) {
+          let alphaDelta = alpha - smoothedAlpha;
+          if (alphaDelta > 180) alphaDelta -= 360;
+          if (alphaDelta < -180) alphaDelta += 360;
+          smoothedAlpha += alphaDelta * alphaSmoothing;
+          if (smoothedAlpha > 180) smoothedAlpha -= 360;
+          if (smoothedAlpha < -180) smoothedAlpha += 360;
+        }
         alpha = smoothedAlpha;
 
         // Suppress alpha changes near gimbal lock to prevent ping-ponging
