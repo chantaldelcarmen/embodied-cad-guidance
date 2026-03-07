@@ -217,7 +217,7 @@
 
         // Calculate calibrated values (relative to starting position)
         let alpha = (event.alpha !== null ? event.alpha : 0) - initialAlpha;
-        let beta = (event.beta !== null ? event.beta : 0) - initialBeta + 90;
+        let beta = (event.beta !== null ? event.beta : 0) - initialBeta;
         const gamma = event.gamma !== null ? event.gamma : 0;
         
         // Normalize alpha to -180 to 180 range
