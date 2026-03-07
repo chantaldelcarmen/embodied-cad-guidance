@@ -62,7 +62,19 @@
     const socket = io();
     const status = document.getElementById('status');
     const dataDiv = document.getElementById('data');
-    const cameraRig = document.querySelector('#camera-rig');
+    let cameraRig = null;
+
+    // Wait for A-Frame to load before getting camera rig
+    document.addEventListener('DOMContentLoaded', () => {
+      const scene = document.querySelector('a-scene');
+      if (scene.hasLoaded) {
+        cameraRig = document.querySelector('#camera-rig');
+      } else {
+        scene.addEventListener('loaded', () => {
+          cameraRig = document.querySelector('#camera-rig');
+        });
+      }
+    });
 
     socket.on('motion-data', (data) => {
       status.textContent = 'Receiving motion data';
