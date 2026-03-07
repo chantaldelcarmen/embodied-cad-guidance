@@ -76,6 +76,10 @@
       }
     });
 
+    // Smoothing for viewer camera
+    let currentRotation = { x: 0, y: 0, z: 0 };
+    const smoothingFactor = 0.15; // Lower = smoother but more lag
+
     socket.on('motion-data', (data) => {
       status.textContent = 'Receiving motion data';
       dataDiv.innerHTML = `
@@ -86,16 +90,28 @@
 
       // Update camera rotation based on phone orientation
       if (cameraRig && data.alpha !== null && data.beta !== null && data.gamma !== null) {
-        const alpha = parseFloat(data.alpha);
-        const beta = parseFloat(data.beta);
+        let alpha = parseFloat(data.alpha);
+        let beta = parseFloat(data.beta);
         const gamma = parseFloat(data.gamma);
         
-        // Apply rotation (matching expert's view)
-        cameraRig.setAttribute('rotation', {
+        // Clamp beta to prevent gimbal lock (match expert's clamping)
+        if (beta > 150) beta = 150;
+        if (beta < 30) beta = 30;
+        
+        // Calculate target rotation
+        const targetRotation = {
           x: beta - 90,
           y: -alpha,
-          z: 0  // Ignore gamma for now to keep horizon level
-        });
+          z: 0
+        };
+        
+        // Smooth interpolation (exponential moving average)
+        currentRotation.x += (targetRotation.x - currentRotation.x) * smoothingFactor;
+        currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor;
+        currentRotation.z += (targetRotation.z - currentRotation.z) * smoothingFactor;
+        
+        // Apply smoothed rotation
+        cameraRig.setAttribute('rotation', currentRotation);
       }
     });
 
