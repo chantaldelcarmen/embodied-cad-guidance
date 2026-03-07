@@ -185,8 +185,13 @@
         // Update expert's own camera view
         if (cameraRig && data.alpha && data.beta && data.gamma) {
           const rotation = cameraRig.getAttribute('rotation');
+          
+          // Clamp beta to prevent gimbal lock (limit tilt range)
+          let beta = parseFloat(data.beta);
+          beta = Math.max(-60, Math.min(60, beta)); // Clamp between -60 and 60
+          
           rotation.y = -parseFloat(data.alpha);
-          rotation.x = parseFloat(data.beta) - 90;
+          rotation.x = beta - 90;
           cameraRig.setAttribute('rotation', rotation);
         }
       });

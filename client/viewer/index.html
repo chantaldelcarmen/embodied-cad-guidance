@@ -74,10 +74,15 @@
 
       // Update camera rotation based on phone orientation
       if (cameraRig && data.alpha !== null && data.beta !== null && data.gamma !== null) {
-        // Match expert's rotation calculation
+        // Match expert's rotation calculation with clamping
         const rotation = cameraRig.getAttribute('rotation');
+        
+        // Clamp beta to prevent gimbal lock (limit tilt range)
+        let beta = parseFloat(data.beta);
+        beta = Math.max(-60, Math.min(60, beta)); // Clamp between -60 and 60
+        
         rotation.y = -parseFloat(data.alpha);
-        rotation.x = parseFloat(data.beta) - 90;
+        rotation.x = beta - 90;
         cameraRig.setAttribute('rotation', rotation);
       }
     });
