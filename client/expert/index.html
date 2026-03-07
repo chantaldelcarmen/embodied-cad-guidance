@@ -160,123 +160,84 @@
     });
 
     startBtn.addEventListener('click', async () => {
-      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        try {
-          const permission = await DeviceOrientationEvent.requestPermission();
-          if (permission === 'granted') {
-            startListening();
-          } else {
-            status.textContent = 'Permission denied';
-          }
-        } catch (error) {
-          status.textContent = 'Error: ' + error.message;
+      try {
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const op = await DeviceOrientationEvent.requestPermission();
+          if (op !== 'granted') { status.textContent = 'Permission denied'; return; }
         }
-      } else {
+        if (typeof DeviceMotionEvent.requestPermission === 'function') {
+          const mp = await DeviceMotionEvent.requestPermission();
+          if (mp !== 'granted') { status.textContent = 'Permission denied'; return; }
+        }
         startListening();
+      } catch (error) {
+        status.textContent = 'Error: ' + error.message;
       }
     });
 
     function startListening() {
-      status.textContent = 'Calibrating... Hold phone steady';
       startBtn.disabled = true;
       startBtn.style.display = 'none';
       document.getElementById('controls').style.display = 'block';
       tapHint.style.display = 'block';
 
       let lastUpdate = 0;
-      const throttleDelay = 50; // Send updates every 50ms (20 fps)
-      
-      // Smoothing for expert's own view
-      let currentRotation = { x: 0, y: 0, z: 0 };
-      const smoothingFactor = 0.3; // Lower = smoother but more lag
-      
-      // Alpha freeze: hold last stable alpha when tilted up (magnetometer unreliable above threshold)
-      let smoothedAlpha = null;
-      const alphaSmoothing = 0.3;
-      const ALPHA_FREEZE_THRESHOLD = 8; // degrees beta above which alpha is frozen
-      
-      // Calibration: capture initial orientation as neutral position
-      let initialAlpha = null;
-      let initialBeta = null;
-      let isCalibrated = false;
+      const throttleDelay = 50; // 20fps
 
-      // Update camera rotation based on device orientation
+      // Camera smoothing
+      let currentRotation = { x: 0, y: 0, z: 0 };
+      const smoothingFactor = 0.3;
+
+      // Gyroscope-integrated heading (no magnetometer - stable at all tilt angles)
+      let headingDeg = 0;
+      let lastMotionTime = null;
+
+      // Beta (tilt) from DeviceOrientationEvent - stable via accelerometer/gravity
+      let currentBeta = 0;
+      let initialBeta = null;
+
+      // DeviceOrientationEvent: calibrate and track beta only
       window.addEventListener('deviceorientation', (event) => {
-        // Calibrate on first reading (use 0 if values are null)
-        if (!isCalibrated) {
-          initialAlpha = event.alpha !== null ? event.alpha : 0;
-          initialBeta = event.beta !== null ? event.beta : 0;
-          isCalibrated = true;
+        if (initialBeta === null && event.beta !== null) {
+          initialBeta = event.beta;
           status.textContent = 'Streaming motion data...';
-          console.log(`Calibrated: α=${initialAlpha.toFixed(1)}° β=${initialBeta.toFixed(1)}°`);
         }
-        
+        if (initialBeta !== null) {
+          currentBeta = (event.beta || 0) - initialBeta;
+          if (currentBeta > 80) currentBeta = 80;
+          if (currentBeta < -80) currentBeta = -80;
+        }
+      });
+
+      // DeviceMotionEvent: integrate gyroscope for heading - immune to magnetometer instability
+      window.addEventListener('devicemotion', (event) => {
         const now = Date.now();
+        if (lastMotionTime !== null && event.rotationRate) {
+          const dt = (now - lastMotionTime) / 1000;
+          // rotationRate.gamma = rotation around device Y axis = yaw when phone held upright
+          headingDeg -= event.rotationRate.gamma * dt;
+          if (headingDeg > 180) headingDeg -= 360;
+          if (headingDeg < -180) headingDeg += 360;
+        }
+        lastMotionTime = now;
+
         if (now - lastUpdate < throttleDelay) return;
         lastUpdate = now;
 
-        // Calculate calibrated values (relative to starting position)
-        let alpha = (event.alpha !== null ? event.alpha : 0) - initialAlpha;
-        let beta = (event.beta !== null ? event.beta : 0) - initialBeta;
-        const gamma = event.gamma !== null ? event.gamma : 0;
-        
-        // Normalize alpha to -180 to 180 range
-        if (alpha > 180) alpha -= 360;
-        if (alpha < -180) alpha += 360;
-
-        // Alpha freeze: when tilted up, hold last stable alpha to prevent magnetometer drift
-        if (smoothedAlpha === null) smoothedAlpha = alpha;
-        if (beta <= ALPHA_FREEZE_THRESHOLD) {
-          let alphaDelta = alpha - smoothedAlpha;
-          if (alphaDelta > 180) alphaDelta -= 360;
-          if (alphaDelta < -180) alphaDelta += 360;
-          smoothedAlpha += alphaDelta * alphaSmoothing;
-          if (smoothedAlpha > 180) smoothedAlpha -= 360;
-          if (smoothedAlpha < -180) smoothedAlpha += 360;
-        }
-        // else: beta above threshold � smoothedAlpha frozen at last stable value
-        alpha = smoothedAlpha;
-
-        // Suppress alpha changes near gimbal lock to prevent ping-ponging
-        if (Math.abs(beta) > 40) {
-          // Near gimbal lock - freeze alpha at last stable value
-          alpha = stableAlpha;
-        } else {
-          // Update stable alpha when away from gimbal lock
-          stableAlpha = alpha;
-        }
-
-        // Clamp beta BEFORE sending to prevent gimbal lock
-        if (beta > 80) beta = 80;   // Limit looking up
-        if (beta < -80) beta = -80;  // Limit looking down
-        
-        // Send calibrated values to viewer
         const data = {
-          alpha: alpha.toFixed(1),
-          beta: beta.toFixed(1),
-          gamma: gamma.toFixed(1)
+          alpha: headingDeg.toFixed(1),
+          beta: currentBeta.toFixed(1),
+          gamma: '0'
         };
-        
+
         socket.emit('motion-data', data);
-        dataDiv.textContent = `α: ${data.alpha}° β: ${data.beta}° γ: ${data.gamma}°`;
+        dataDiv.textContent = 'heading: ' + data.alpha + 'deg  tilt: ' + data.beta + 'deg';
 
-        // Update expert's own camera view
-        if (cameraRig && alpha !== null && beta !== null) {
-
-          // Calculate target rotation (calibration offset already applied)
-          const targetRotation = {
-            x: beta,     // tilt already calibrated
-            y: alpha,    // turn already calibrated (flip the sign)
-            z: 0
-          };
-          
-          // Smooth interpolation (exponential moving average)
-          // Reduced smoothing for more responsive controls
+        if (cameraRig) {
+          const targetRotation = { x: currentBeta, y: headingDeg, z: 0 };
           currentRotation.x += (targetRotation.x - currentRotation.x) * smoothingFactor;
-          currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor; // Same speed as X
-          currentRotation.z += (targetRotation.z - currentRotation.z) * smoothingFactor;
-          
-          // Apply smoothed rotation
+          currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor;
+          currentRotation.z = 0;
           cameraRig.setAttribute('rotation', currentRotation);
         }
       });
