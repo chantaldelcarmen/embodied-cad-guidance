@@ -89,7 +89,7 @@
       `;
 
       // Update camera rotation based on phone orientation
-      if (cameraRig && data.alpha !== null && data.beta !== null && data.gamma !== null) {
+      if (cameraRig) {
         let alpha = parseFloat(data.alpha);
         let beta = parseFloat(data.beta);
         const gamma = parseFloat(data.gamma);
@@ -101,14 +101,14 @@
         // Calculate target rotation (values already calibrated by expert)
         const targetRotation = {
           x: beta,     // tilt already calibrated
-          y: -alpha,   // turn already calibrated
+          y: alpha,    // turn already calibrated (flip the sign)
           z: 0
         };
         
         // Smooth interpolation (exponential moving average)
-        // Use heavier smoothing on Y-axis to combat compass drift
+        // Reduced smoothing for more responsive controls
         currentRotation.x += (targetRotation.x - currentRotation.x) * smoothingFactor;
-        currentRotation.y += (targetRotation.y - currentRotation.y) * (smoothingFactor * 0.5); // Half speed for compass
+        currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor; // Same speed as X
         currentRotation.z += (targetRotation.z - currentRotation.z) * smoothingFactor;
         
         // Apply smoothed rotation
