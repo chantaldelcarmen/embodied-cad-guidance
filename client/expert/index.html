@@ -183,8 +183,19 @@
       document.getElementById('controls').style.display = 'block';
       tapHint.style.display = 'block';
 
+      let lastUpdate = 0;
+      const throttleDelay = 50; // Send updates every 50ms (20 fps)
+      
+      // Smoothing for expert's own view
+      let currentRotation = { x: 0, y: 0, z: 0 };
+      const smoothingFactor = 0.15; // Lower = smoother but more lag
+
       // Update camera rotation based on device orientation
       window.addEventListener('deviceorientation', (event) => {
+        const now = Date.now();
+        if (now - lastUpdate < throttleDelay) return;
+        lastUpdate = now;
+
         const data = {
           alpha: event.alpha?.toFixed(1),
           beta: event.beta?.toFixed(1),
@@ -196,16 +207,28 @@
 
         // Update expert's own camera view
         if (cameraRig && data.alpha && data.beta && data.gamma) {
-          const alpha = parseFloat(data.alpha);
-          const beta = parseFloat(data.beta);
+          let alpha = parseFloat(data.alpha);
+          let beta = parseFloat(data.beta);
           const gamma = parseFloat(data.gamma);
           
-          // Apply rotation
-          cameraRig.setAttribute('rotation', {
+          // Clamp beta to prevent gimbal lock
+          if (beta > 150) beta = 150;
+          if (beta < 30) beta = 30;
+          
+          // Calculate target rotation
+          const targetRotation = {
             x: beta - 90,
             y: -alpha,
-            z: 0  // Ignore gamma for now to keep horizon level
-          });
+            z: 0
+          };
+          
+          // Smooth interpolation (exponential moving average)
+          currentRotation.x += (targetRotation.x - currentRotation.x) * smoothingFactor;
+          currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor;
+          currentRotation.z += (targetRotation.z - currentRotation.z) * smoothingFactor;
+          
+          // Apply smoothed rotation
+          cameraRig.setAttribute('rotation', currentRotation);
         }
       });
 
