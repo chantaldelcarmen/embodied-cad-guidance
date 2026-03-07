@@ -229,25 +229,38 @@
         if (alpha > 180) alpha -= 360;
         if (alpha < -180) alpha += 360;
 
-        // Direction-consistency filter: block alpha updates unless movement is sustained (not oscillating)
+        // Alpha filtering: direction-consistency filter only in unstable upward-tilt zone (beta > 8deg)
+        // Below that, use direct EMA for fast responsive tracking
         if (smoothedAlpha === null) { smoothedAlpha = alpha; lastRawAlpha = alpha; }
         let rawDelta = alpha - lastRawAlpha;
         if (rawDelta > 180) rawDelta -= 360;
         if (rawDelta < -180) rawDelta += 360;
         lastRawAlpha = alpha;
-        const currentSign = Math.abs(rawDelta) < 1 ? lastAlphaDeltaSign : Math.sign(rawDelta);
-        if (currentSign === lastAlphaDeltaSign) {
-          consistentFrames++;
+
+        if (beta > 8) {
+          // Unstable zone: require sustained direction before updating to block oscillation
+          const currentSign = Math.abs(rawDelta) < 1 ? lastAlphaDeltaSign : Math.sign(rawDelta);
+          if (currentSign === lastAlphaDeltaSign) {
+            consistentFrames++;
+          } else {
+            consistentFrames = 0;
+          }
+          lastAlphaDeltaSign = currentSign;
+          if (consistentFrames >= CONSISTENT_FRAMES_REQUIRED) {
+            let alphaDelta = alpha - smoothedAlpha;
+            if (alphaDelta > 180) alphaDelta -= 360;
+            if (alphaDelta < -180) alphaDelta += 360;
+            smoothedAlpha += alphaDelta * alphaSmoothing;
+            if (smoothedAlpha > 180) smoothedAlpha -= 360;
+            if (smoothedAlpha < -180) smoothedAlpha += 360;
+          }
         } else {
+          // Normal zone: direct EMA with higher factor for responsive tracking
           consistentFrames = 0;
-        }
-        lastAlphaDeltaSign = currentSign;
-        // Only feed EMA when movement is sustained in one direction (filters oscillation)
-        if (consistentFrames >= CONSISTENT_FRAMES_REQUIRED) {
           let alphaDelta = alpha - smoothedAlpha;
           if (alphaDelta > 180) alphaDelta -= 360;
           if (alphaDelta < -180) alphaDelta += 360;
-          smoothedAlpha += alphaDelta * alphaSmoothing;
+          smoothedAlpha += alphaDelta * 0.3;
           if (smoothedAlpha > 180) smoothedAlpha -= 360;
           if (smoothedAlpha < -180) smoothedAlpha += 360;
         }
