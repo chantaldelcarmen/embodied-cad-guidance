@@ -237,7 +237,7 @@
         if (rawDelta < -180) rawDelta += 360;
         lastRawAlpha = alpha;
 
-        if (beta > 8) {
+        if (beta > 5) {
           // Unstable zone: require sustained direction before updating to block oscillation
           const currentSign = Math.abs(rawDelta) < 1 ? lastAlphaDeltaSign : Math.sign(rawDelta);
           if (currentSign === lastAlphaDeltaSign) {
