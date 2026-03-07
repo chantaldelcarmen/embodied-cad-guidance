@@ -190,10 +190,10 @@
       let currentRotation = { x: 0, y: 0, z: 0 };
       const smoothingFactor = 0.15; // Lower = smoother but more lag
       
-      // Track previous values for deadzone
-      let lastAlpha = null;
-      let lastBeta = null;
-      const alphaDrift = 2; // Ignore alpha changes smaller than 2 degrees
+      // Pre-filter state for alpha (low-pass to kill magnetometer instability on upward tilt)
+      let smoothedAlpha = null;
+      const alphaSmoothing = 0.1;
+      let stableAlpha = 0; // Track stable alpha for gimbal lock prevention
       
       // Calibration: capture initial orientation as neutral position
       let initialAlpha = null;
@@ -223,6 +223,24 @@
         // Normalize alpha to -180 to 180 range
         if (alpha > 180) alpha -= 360;
         if (alpha < -180) alpha += 360;
+
+        // Pre-filter alpha: low-pass EMA kills magnetometer noise before it reaches camera or viewer
+        if (smoothedAlpha === null) smoothedAlpha = alpha; // initialize without jump
+        smoothedAlpha += (alpha - smoothedAlpha) * alphaSmoothing;
+        alpha = smoothedAlpha;
+
+        // Suppress alpha changes near gimbal lock to prevent ping-ponging
+        if (Math.abs(beta) > 40) {
+          // Near gimbal lock - freeze alpha at last stable value
+          alpha = stableAlpha;
+        } else {
+          // Update stable alpha when away from gimbal lock
+          stableAlpha = alpha;
+        }
+        
+        // Clamp beta BEFORE sending to prevent gimbal lock
+        if (beta > 80) beta = 80;   // Limit looking up
+        if (beta < -80) beta = -80;  // Limit looking down
         
         // Send calibrated values to viewer
         const data = {
@@ -236,20 +254,7 @@
 
         // Update expert's own camera view
         if (cameraRig && alpha !== null && beta !== null) {
-          
-          // Apply deadzone to alpha to prevent compass drift
-          if (lastAlpha !== null) {
-            const alphaDiff = Math.abs(alpha - lastAlpha);
-            if (alphaDiff < alphaDrift && alphaDiff > 0.1) {
-              alpha = lastAlpha; // Ignore small changes
-            }
-          }
-          lastAlpha = alpha;
-          
-          // Clamp beta to prevent gimbal lock
-          if (beta > 85) beta = 85;   // Limit looking up
-          if (beta < -85) beta = -85;  // Limit looking down
-          
+
           // Calculate target rotation (calibration offset already applied)
           const targetRotation = {
             x: beta,     // tilt already calibrated
@@ -293,7 +298,23 @@
 
     function highlightObject(objectId) {
       socket.emit('highlight', { object: objectId });
-      status.textContent = `Highlighted ${objectId}`;
+      
+      // Highlight on expert's own screen
+      const object = document.querySelector(`#${objectId}`);
+      if (object) {
+        // Reset all objects to their original colors first
+        document.querySelectorAll('.clickable').forEach(obj => {
+          const id = obj.getAttribute('id');
+          if (id === 'box') obj.setAttribute('color', '#4CC3D9');
+          if (id === 'cylinder') obj.setAttribute('color', '#FFC65D');
+          if (id === 'sphere') obj.setAttribute('color', '#EF2D5E');
+        });
+        
+        // Highlight the selected object
+        object.setAttribute('color', '#FFFF00'); // Yellow highlight
+        status.textContent = `Highlighted ${objectId}`;
+      }
+      
       setTimeout(() => {
         status.textContent = 'Streaming motion data...';
       }, 1000);
