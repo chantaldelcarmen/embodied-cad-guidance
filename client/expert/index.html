@@ -6,15 +6,26 @@
   <title>Expert - Motion Capture</title>
   <style>
     body {
+      margin: 0;
+      overflow: hidden;
       font-family: Arial, sans-serif;
-      padding: 20px;
-      max-width: 600px;
-      margin: 0 auto;
+    }
+    #ui-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      pointer-events: none;
+    }
+    #ui-overlay > * {
+      pointer-events: auto;
     }
     button {
-      width: 100%;
+      width: calc(100% - 40px);
+      max-width: 500px;
       padding: 15px;
-      margin: 10px 0;
+      margin: 10px 20px;
       font-size: 18px;
       border: none;
       border-radius: 8px;
@@ -28,43 +39,94 @@
       background: #BBB;
     }
     .highlight-btn {
-      background: #EEE;
+      background: rgba(238, 238, 238, 0.9);
       color: #333;
+      padding: 10px;
+      font-size: 14px;
+      margin: 5px 20px;
     }
     .highlight-btn:active {
       background: #FFC65D;
     }
     #status {
-      margin: 20px 0;
-      padding: 15px;
-      background: #f0f0f0;
+      margin: 10px 20px;
+      padding: 10px 15px;
+      background: rgba(240, 240, 240, 0.9);
       border-radius: 8px;
       font-weight: bold;
+      font-size: 14px;
     }
     #data {
-      margin: 10px 0;
+      margin: 5px 20px;
+      padding: 5px 15px;
       font-family: monospace;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 4px;
     }
     .controls {
-      margin-top: 30px;
+      margin-top: 10px;
     }
     .controls h2 {
-      font-size: 20px;
-      margin-bottom: 15px;
+      font-size: 16px;
+      margin: 10px 20px;
+      color: white;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    }
+    #tap-hint {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(76, 195, 217, 0.9);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      pointer-events: none;
+    }
+    a-scene {
+      width: 100vw;
+      height: 100vh;
     }
   </style>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 </head>
 <body>
-  <h1>Expert Mode</h1>
-  <button id="startBtn">Start Motion Capture</button>
-  <div id="status">Ready</div>
-  <div id="data"></div>
-  
-  <div class="controls" id="controls" style="display: none;">
-    <h2>Highlight Objects</h2>
-    <button class="highlight-btn" onclick="highlightObject('box')">Highlight Box</button>
-    <button class="highlight-btn" onclick="highlightObject('cylinder')">Highlight Cylinder</button>
-    <button class="highlight-btn" onclick="highlightObject('sphere')">Highlight Sphere</button>
+  <!-- A-Frame 3D Scene -->
+  <a-scene id="scene" vr-mode-ui="enabled: false">
+    <a-sky color="#87CEEB"></a-sky>
+    <a-light type="ambient" intensity="0.5"></a-light>
+    <a-light type="directional" position="-1 1 1" intensity="0.7"></a-light>
+
+    <!-- Camera rig for rotation control -->
+    <a-entity id="camera-rig" position="0 1.6 5">
+      <a-camera></a-camera>
+    </a-entity>
+
+    <!-- Ground plane -->
+    <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" color="#7BC8A4"></a-plane>
+
+    <!-- Interactive objects matching viewer -->
+    <a-box id="box" position="-2 1 0" color="#4CC3D9" class="clickable"></a-box>
+    <a-cylinder id="cylinder" position="0 1 0" color="#FFC65D" class="clickable"></a-cylinder>
+    <a-sphere id="sphere" position="2 1 0" color="#F16745" class="clickable"></a-sphere>
+  </a-scene>
+
+  <!-- UI Overlay -->
+  <div id="ui-overlay">
+    <button id="startBtn">Start Motion Capture</button>
+    <div id="status">Ready</div>
+    <div id="data"></div>
+    
+    <div class="controls" id="controls" style="display: none;">
+      <h2>Fallback Controls</h2>
+      <button class="highlight-btn" onclick="highlightObject('box')">Highlight Box</button>
+      <button class="highlight-btn" onclick="highlightObject('cylinder')">Highlight Cylinder</button>
+      <button class="highlight-btn" onclick="highlightObject('sphere')">Highlight Sphere</button>
+    </div>
+
+    <div id="tap-hint" style="display: none;">👆 Tap on objects to highlight them</div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -73,6 +135,9 @@
     const startBtn = document.getElementById('startBtn');
     const status = document.getElementById('status');
     const dataDiv = document.getElementById('data');
+    const scene = document.querySelector('a-scene');
+    const cameraRig = document.getElementById('camera-rig');
+    const tapHint = document.getElementById('tap-hint');
 
     startBtn.addEventListener('click', async () => {
       if (typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -94,8 +159,11 @@
     function startListening() {
       status.textContent = 'Streaming motion data...';
       startBtn.disabled = true;
+      startBtn.style.display = 'none';
       document.getElementById('controls').style.display = 'block';
+      tapHint.style.display = 'block';
 
+      // Update camera rotation based on device orientation
       window.addEventListener('deviceorientation', (event) => {
         const data = {
           alpha: event.alpha?.toFixed(1),
@@ -105,6 +173,39 @@
         
         socket.emit('motion-data', data);
         dataDiv.textContent = `α: ${data.alpha}° β: ${data.beta}° γ: ${data.gamma}°`;
+
+        // Update expert's own camera view
+        if (cameraRig && data.alpha && data.beta && data.gamma) {
+          const rotation = cameraRig.getAttribute('rotation');
+          rotation.y = -parseFloat(data.alpha);
+          rotation.x = parseFloat(data.beta) - 90;
+          cameraRig.setAttribute('rotation', rotation);
+        }
+      });
+
+      // Add raycasting for tap-to-select
+      setupRaycasting();
+    }
+
+    function setupRaycasting() {
+      const camera = document.querySelector('a-camera');
+      
+      // Handle touch/click events
+      scene.addEventListener('click', (evt) => {
+        // Get the intersection point
+        const intersectedEl = evt.detail.intersection?.object.el;
+        
+        if (intersectedEl && intersectedEl.classList.contains('clickable')) {
+          const objectId = intersectedEl.id;
+          highlightObject(objectId);
+          
+          // Visual feedback
+          const originalColor = intersectedEl.getAttribute('color');
+          intersectedEl.setAttribute('color', '#FFFF00');
+          setTimeout(() => {
+            intersectedEl.setAttribute('color', originalColor);
+          }, 300);
+        }
       });
     }
 
