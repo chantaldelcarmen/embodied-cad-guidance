@@ -17,54 +17,143 @@
       border-radius: 8px;
       font-family: monospace;
       z-index: 1000;
+      min-width: 180px;
     }
     #status { font-weight: bold; margin-bottom: 10px; }
     #data { font-size: 14px; }
+    #follow-btn {
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #4CC3D9;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+    #follow-btn:hover { opacity: 0.85; }
+
+    /* Snap flash overlay */
+    #snap-flash {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(239, 45, 94, 0.25);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 999;
+    }
+    #snap-flash.active { opacity: 1; }
   </style>
 </head>
 <body>
+
+  <!-- Flash overlay for snap-to-view feedback -->
+  <div id="snap-flash"></div>
+
   <!-- UI Overlay -->
   <div id="ui-overlay">
     <div id="status">Waiting for motion data...</div>
     <div id="data"></div>
+    <button id="follow-btn" onclick="toggleFollow()">👁 Following Expert</button>
   </div>
 
   <!-- A-Frame Scene -->
   <a-scene>
-    <!-- Sky -->
     <a-sky color="#87CEEB"></a-sky>
-
-    <!-- Lighting -->
     <a-light type="ambient" color="#BBB"></a-light>
     <a-light type="directional" color="#FFF" intensity="0.6" position="2 4 3"></a-light>
-
-    <!-- Ground plane -->
     <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" color="#7BC8A4"></a-plane>
 
-    <!-- Simple 3D model (box for now) -->
-    <a-box id="box" position="0 1 -3" rotation="0 45 0" color="#4CC3D9" 
-           shadow="cast: true; receive: true">
-    </a-box>
-
-    <!-- Additional test objects -->
+    <a-box id="box" position="0 1 -3" rotation="0 45 0" color="#4CC3D9"
+           shadow="cast: true; receive: true"></a-box>
     <a-cylinder id="cylinder" position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
     <a-sphere id="sphere" position="-2 1.25 -3" radius="0.5" color="#EF2D5E"></a-sphere>
 
-    <!-- Camera -->
     <a-entity id="camera-rig" position="0 1.6 0">
       <a-camera id="camera" position="0 0 0"></a-camera>
     </a-entity>
   </a-scene>
 
-  <!-- Socket.io for receiving motion data -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const status = document.getElementById('status');
     const dataDiv = document.getElementById('data');
+    const snapFlash = document.getElementById('snap-flash');
     let cameraRig = null;
 
-    // Wait for A-Frame to load before getting camera rig
+    // --- Follow toggle ---
+    let followExpert = true;
+
+    function toggleFollow() {
+      followExpert = !followExpert;
+      const btn = document.getElementById('follow-btn');
+      if (followExpert) {
+        btn.textContent = '👁 Following Expert';
+        btn.style.background = '#4CC3D9';
+      } else {
+        btn.textContent = '🔓 Exploring Freely';
+        btn.style.background = '#888';
+      }
+    }
+
+    // --- Web Audio API setup ---
+    // AudioContext created lazily on first sound (browser autoplay policy)
+    let audioCtx = null;
+
+    function getAudioCtx() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      return audioCtx;
+    }
+
+    // Short soft beep for highlight
+    function playHighlightSound() {
+      const ctx = getAudioCtx();
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, ctx.currentTime);       // A5 note
+      oscillator.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15); // drop to A4
+
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.3);
+    }
+
+    // Distinct "snap" sound for lock view
+    function playSnapSound() {
+      const ctx = getAudioCtx();
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(300, ctx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.1); // quick rise
+
+      gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.25);
+    }
+
+    // --- A-Frame load ---
     document.addEventListener('DOMContentLoaded', () => {
       const scene = document.querySelector('a-scene');
       if (scene.hasLoaded) {
@@ -74,44 +163,66 @@
           cameraRig = document.querySelector('#camera-rig');
         });
       }
+
+      // Unlock AudioContext on first user interaction (browser requirement)
+      document.body.addEventListener('click', () => getAudioCtx(), { once: true });
     });
 
-    // Smoothing for viewer camera
+    // --- Camera smoothing ---
     let currentRotation = { x: 0, y: 0, z: 0 };
-    const smoothingFactor = 0.8; // Lower = smoother but more lag
+    const smoothingFactor = 0.8;
 
     socket.on('motion-data', (data) => {
-      status.textContent = 'Receiving motion data';
+      status.textContent = followExpert ? 'Receiving motion data' : 'Exploring freely';
       dataDiv.innerHTML = `
         Alpha: ${data.alpha}°<br>
         Beta: ${data.beta}°<br>
         Gamma: ${data.gamma}°
       `;
 
-      // Update camera rotation based on phone orientation
-      if (cameraRig) {
-        let alpha = parseFloat(data.alpha);
-        let beta = parseFloat(data.beta);
-        const gamma = parseFloat(data.gamma);
-        
-        // Beta already clamped by expert before transmission
-        
-        // Calculate target rotation (values already calibrated by expert)
+      if (cameraRig && followExpert) {
         const targetRotation = {
-          x: beta,     // tilt already calibrated
-          y: alpha,    // turn already calibrated (flip the sign)
+          x: parseFloat(data.beta),
+          y: parseFloat(data.alpha),
           z: 0
         };
-        
-        // Smooth interpolation (exponential moving average)
-        // Reduced smoothing for more responsive controls
+
         currentRotation.x += (targetRotation.x - currentRotation.x) * smoothingFactor;
-        currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor; // Same speed as X
-        currentRotation.z += (targetRotation.z - currentRotation.z) * smoothingFactor;
-        
-        // Apply smoothed rotation
+        currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor;
+        currentRotation.z = 0;
+
         cameraRig.setAttribute('rotation', currentRotation);
       }
+    });
+
+    // --- Snap-to-view ---
+    socket.on('snap-view', (data) => {
+      if (!cameraRig) return;
+
+      // Instantly jump camera to expert's locked viewpoint
+      const snapRotation = { x: data.x, y: data.y, z: 0 };
+      currentRotation = { ...snapRotation };
+      cameraRig.setAttribute('rotation', snapRotation);
+
+      // If they were exploring freely, switch them back to following
+      if (!followExpert) {
+        followExpert = true;
+        const btn = document.getElementById('follow-btn');
+        btn.textContent = '👁 Following Expert';
+        btn.style.background = '#4CC3D9';
+      }
+
+      // Visual flash feedback
+      snapFlash.classList.add('active');
+      setTimeout(() => snapFlash.classList.remove('active'), 300);
+
+      // Sound feedback
+      playSnapSound();
+
+      status.textContent = '📌 Expert locked this view';
+      setTimeout(() => {
+        status.textContent = 'Receiving motion data';
+      }, 2000);
     });
 
     socket.on('connect', () => {
@@ -119,34 +230,31 @@
       status.textContent = 'Connected - waiting for motion data';
     });
 
-    // Store original colors
+    // --- Highlight ---
     const originalColors = {
       box: '#4CC3D9',
       cylinder: '#FFC65D',
       sphere: '#EF2D5E'
     };
 
-    // Listen for highlight events
     socket.on('highlight', (data) => {
       const objectId = data.object;
       const object = document.querySelector(`#${objectId}`);
-      
+
       if (object) {
-        // Reset all objects to original colors
         Object.keys(originalColors).forEach(id => {
           const obj = document.querySelector(`#${id}`);
-          if (obj) {
-            obj.setAttribute('color', originalColors[id]);
-          }
+          if (obj) obj.setAttribute('color', originalColors[id]);
         });
-        
-        // Highlight the selected object
-        object.setAttribute('color', '#FFFF00'); // Yellow highlight
-        status.textContent = `Highlighting ${objectId}`;
-        
-        // Reset status after 2 seconds
+
+        object.setAttribute('color', '#FFFF00');
+
+        // Sound feedback on highlight
+        playHighlightSound();
+
+        status.textContent = `Highlighting: ${objectId}`;
         setTimeout(() => {
-          status.textContent = 'Receiving motion data';
+          status.textContent = followExpert ? 'Receiving motion data' : 'Exploring freely';
         }, 2000);
       }
     });

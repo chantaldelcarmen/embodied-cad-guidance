@@ -26,6 +26,16 @@ io.on("connection", (socket) => {
     console.log("Highlight event:", data.object);
     socket.broadcast.emit("highlight", data);
   });
+
+  // snap-to-view — expert locks current viewpoint, broadcast to all viewers
+  socket.on("snap-view", (data) => {
+    console.log("Snap-to-view event:", data);
+    socket.broadcast.emit("snap-view", data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("client disconnected");
+  });
 });
 
 const PORT = process.env.PORT || 3000;

@@ -48,6 +48,15 @@
     .highlight-btn:active {
       background: #FFC65D;
     }
+    #lockViewBtn {
+      background: #EF2D5E;
+      color: white;
+      font-size: 16px;
+      margin: 5px 20px;
+    }
+    #lockViewBtn:active {
+      background: #c0234e;
+    }
     #status {
       margin: 10px 20px;
       padding: 10px 15px;
@@ -115,7 +124,7 @@
     <!-- Ground plane -->
     <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" color="#7BC8A4"></a-plane>
 
-    <!-- Interactive objects matching viewer (same positions as viewer) -->
+    <!-- Interactive objects matching viewer -->
     <a-box id="box" position="0 1 -3" rotation="0 45 0" color="#4CC3D9" class="clickable"></a-box>
     <a-cylinder id="cylinder" position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D" class="clickable"></a-cylinder>
     <a-sphere id="sphere" position="-2 1.25 -3" radius="0.5" color="#EF2D5E" class="clickable"></a-sphere>
@@ -128,13 +137,16 @@
     <div id="data"></div>
     
     <div class="controls" id="controls" style="display: none;">
+      <!-- Lock View button -->
+      <button id="lockViewBtn" onclick="lockView()">📌 Lock This View for Novice</button>
+
       <h2>Fallback Controls</h2>
       <button class="highlight-btn" onclick="highlightObject('box')">Highlight Box</button>
       <button class="highlight-btn" onclick="highlightObject('cylinder')">Highlight Cylinder</button>
       <button class="highlight-btn" onclick="highlightObject('sphere')">Highlight Sphere</button>
     </div>
 
-    <div id="tap-hint" style="display: none;">👆 Tap on objects to highlight them</div>
+    <div id="tap-hint" style="display: none;">👆 Tap objects to highlight | 📌 Lock view to teach</div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -147,7 +159,9 @@
     let scene = null;
     let cameraRig = null;
 
-    // Wait for A-Frame to load
+    let currentHeading = 0;
+    let currentTilt = 0;
+
     document.addEventListener('DOMContentLoaded', () => {
       scene = document.querySelector('a-scene');
       if (scene.hasLoaded) {
@@ -182,25 +196,21 @@
       tapHint.style.display = 'block';
 
       let lastUpdate = 0;
-      const throttleDelay = 50; // 20fps
+      const throttleDelay = 50;
 
-      // Camera smoothing
       let currentRotation = { x: 0, y: 0, z: 0 };
       const smoothingFactor = 0.3;
 
-      // Complementary filter: gyroscope for fast stable tracking, magnetometer for slow drift correction
-      let headingDeg = null;   // initialized from magnetometer on first reading
+      let headingDeg = null;
       let lastMotionTime = null;
-      let magHeading = null;   // calibrated magnetometer heading
+      let magHeading = null;
       let initialAlpha = null;
-      const MAG_CORRECTION = 0.02; // magnetometer weight - small to avoid instability
-      const MAG_FREEZE_THRESHOLD = 8; // freeze mag correction above this beta (unstable zone)
+      const MAG_CORRECTION = 0.02;
+      const MAG_FREEZE_THRESHOLD = 8;
 
-      // Beta (tilt) from DeviceOrientationEvent - stable via accelerometer/gravity
       let currentBeta = 0;
       let initialBeta = null;
 
-      // DeviceOrientationEvent: calibrate beta and track magnetometer heading for drift correction
       window.addEventListener('deviceorientation', (event) => {
         if (initialBeta === null && event.beta !== null) {
           initialBeta = event.beta;
@@ -212,7 +222,6 @@
           if (currentBeta > 80) currentBeta = 80;
           if (currentBeta < -80) currentBeta = -80;
 
-          // Calibrated magnetometer heading (absolute reference for drift correction)
           let rawMag = (event.alpha || 0) - initialAlpha;
           if (rawMag > 180) rawMag -= 360;
           if (rawMag < -180) rawMag += 360;
@@ -220,19 +229,16 @@
         }
       });
 
-      // DeviceMotionEvent: gyroscope integration + slow magnetometer correction
       window.addEventListener('devicemotion', (event) => {
         const now = Date.now();
         if (lastMotionTime !== null && event.rotationRate) {
           const dt = (now - lastMotionTime) / 1000;
 
-          // Gyroscope step: fast and stable
           if (headingDeg === null) headingDeg = magHeading || 0;
           headingDeg -= event.rotationRate.gamma * dt;
           if (headingDeg > 180) headingDeg -= 360;
           if (headingDeg < -180) headingDeg += 360;
 
-          // Magnetometer correction: only when beta is stable (not in unstable upward-tilt zone)
           if (magHeading !== null && currentBeta <= MAG_FREEZE_THRESHOLD) {
             let magDelta = magHeading - headingDeg;
             if (magDelta > 180) magDelta -= 360;
@@ -241,6 +247,9 @@
           }
         }
         lastMotionTime = now;
+
+        currentHeading = headingDeg || 0;
+        currentTilt = currentBeta;
 
         if (now - lastUpdate < throttleDelay) return;
         lastUpdate = now;
@@ -263,16 +272,27 @@
         }
       });
 
-      // Add raycasting for tap-to-select
       setupRaycasting();
     }
 
+    // Send snap-to-view event with current rotation
+    function lockView() {
+      const snapData = {
+        x: currentTilt,
+        y: currentHeading,
+        z: 0
+      };
+      socket.emit('snap-view', snapData);
+      status.textContent = '📌 View locked for novice!';
+      setTimeout(() => {
+        status.textContent = 'Streaming motion data...';
+      }, 1500);
+    }
+
     function setupRaycasting() {
-      // Listen for clicks on clickable objects
       const clickables = document.querySelectorAll('.clickable');
-      
       clickables.forEach(obj => {
-        obj.addEventListener('click', (evt) => {
+        obj.addEventListener('click', () => {
           highlightObject(obj.id);
         });
       });
@@ -280,23 +300,19 @@
 
     function highlightObject(objectId) {
       socket.emit('highlight', { object: objectId });
-      
-      // Highlight on expert's own screen
+
       const object = document.querySelector(`#${objectId}`);
       if (object) {
-        // Reset all objects to their original colors first
         document.querySelectorAll('.clickable').forEach(obj => {
           const id = obj.getAttribute('id');
           if (id === 'box') obj.setAttribute('color', '#4CC3D9');
           if (id === 'cylinder') obj.setAttribute('color', '#FFC65D');
           if (id === 'sphere') obj.setAttribute('color', '#EF2D5E');
         });
-        
-        // Highlight the selected object
-        object.setAttribute('color', '#FFFF00'); // Yellow highlight
+        object.setAttribute('color', '#FFFF00');
         status.textContent = `Highlighted ${objectId}`;
       }
-      
+
       setTimeout(() => {
         status.textContent = 'Streaming motion data...';
       }, 1000);
