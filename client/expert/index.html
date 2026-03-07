@@ -189,6 +189,11 @@
       // Smoothing for expert's own view
       let currentRotation = { x: 0, y: 0, z: 0 };
       const smoothingFactor = 0.15; // Lower = smoother but more lag
+      
+      // Track previous values for deadzone
+      let lastAlpha = null;
+      let lastBeta = null;
+      const alphaDrift = 2; // Ignore alpha changes smaller than 2 degrees
 
       // Update camera rotation based on device orientation
       window.addEventListener('deviceorientation', (event) => {
@@ -211,6 +216,15 @@
           let beta = parseFloat(data.beta);
           const gamma = parseFloat(data.gamma);
           
+          // Apply deadzone to alpha to prevent compass drift
+          if (lastAlpha !== null) {
+            const alphaDiff = Math.abs(alpha - lastAlpha);
+            if (alphaDiff < alphaDrift && alphaDiff > 0.1) {
+              alpha = lastAlpha; // Ignore small changes
+            }
+          }
+          lastAlpha = alpha;
+          
           // Clamp beta to prevent gimbal lock
           if (beta > 150) beta = 150;
           if (beta < 30) beta = 30;
@@ -223,8 +237,9 @@
           };
           
           // Smooth interpolation (exponential moving average)
+          // Use heavier smoothing on Y-axis to combat compass drift
           currentRotation.x += (targetRotation.x - currentRotation.x) * smoothingFactor;
-          currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor;
+          currentRotation.y += (targetRotation.y - currentRotation.y) * (smoothingFactor * 0.5); // Half speed for compass
           currentRotation.z += (targetRotation.z - currentRotation.z) * smoothingFactor;
           
           // Apply smoothed rotation

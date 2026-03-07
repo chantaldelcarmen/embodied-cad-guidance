@@ -106,8 +106,9 @@
         };
         
         // Smooth interpolation (exponential moving average)
+        // Use heavier smoothing on Y-axis to combat compass drift
         currentRotation.x += (targetRotation.x - currentRotation.x) * smoothingFactor;
-        currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor;
+        currentRotation.y += (targetRotation.y - currentRotation.y) * (smoothingFactor * 0.5); // Half speed for compass
         currentRotation.z += (targetRotation.z - currentRotation.z) * smoothingFactor;
         
         // Apply smoothed rotation
