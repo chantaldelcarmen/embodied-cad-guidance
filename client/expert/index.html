@@ -193,6 +193,7 @@
       // Track previous values for deadzone
       let lastAlpha = null;
       let lastBeta = null;
+      let stableAlpha = 0; // Track stable alpha for gimbal lock prevention
       const alphaDrift = 2; // Ignore alpha changes smaller than 2 degrees
       
       // Calibration: capture initial orientation as neutral position
@@ -224,9 +225,18 @@
         if (alpha > 180) alpha -= 360;
         if (alpha < -180) alpha += 360;
         
+        // Suppress alpha changes near gimbal lock to prevent ping-ponging
+        if (Math.abs(beta) > 70) {
+          // Near gimbal lock - freeze alpha at last stable value
+          alpha = stableAlpha;
+        } else {
+          // Update stable alpha when away from gimbal lock
+          stableAlpha = alpha;
+        }
+        
         // Clamp beta BEFORE sending to prevent gimbal lock
-        if (beta > 70) beta = 70;   // Limit looking up
-        if (beta < -70) beta = -70;  // Limit looking down
+        if (beta > 80) beta = 80;   // Limit looking up
+        if (beta < -80) beta = -80;  // Limit looking down
         
         // Send calibrated values to viewer
         const data = {
