@@ -224,9 +224,14 @@
         if (alpha > 180) alpha -= 360;
         if (alpha < -180) alpha += 360;
 
-        // Pre-filter alpha: low-pass EMA kills magnetometer noise before it reaches camera or viewer
+        // Pre-filter alpha: low-pass EMA using shortest angular path to avoid wrap-around sweeps
         if (smoothedAlpha === null) smoothedAlpha = alpha; // initialize without jump
-        smoothedAlpha += (alpha - smoothedAlpha) * alphaSmoothing;
+        let alphaDelta = alpha - smoothedAlpha;
+        if (alphaDelta > 180) alphaDelta -= 360;
+        if (alphaDelta < -180) alphaDelta += 360;
+        smoothedAlpha += alphaDelta * alphaSmoothing;
+        if (smoothedAlpha > 180) smoothedAlpha -= 360;
+        if (smoothedAlpha < -180) smoothedAlpha += 360;
         alpha = smoothedAlpha;
 
         // Suppress alpha changes near gimbal lock to prevent ping-ponging
