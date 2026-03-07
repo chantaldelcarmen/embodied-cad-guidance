@@ -188,7 +188,7 @@
       
       // Smoothing for expert's own view
       let currentRotation = { x: 0, y: 0, z: 0 };
-      const smoothingFactor = 0.15; // Lower = smoother but more lag
+      const smoothingFactor = 0.3; // Lower = smoother but more lag
       
       // Track previous values for deadzone
       let lastAlpha = null;
@@ -224,6 +224,10 @@
         if (alpha > 180) alpha -= 360;
         if (alpha < -180) alpha += 360;
         
+        // Clamp beta BEFORE sending to prevent gimbal lock
+        if (beta > 70) beta = 70;   // Limit looking up
+        if (beta < -70) beta = -70;  // Limit looking down
+        
         // Send calibrated values to viewer
         const data = {
           alpha: alpha.toFixed(1),
@@ -246,9 +250,7 @@
           }
           lastAlpha = alpha;
           
-          // Clamp beta to prevent gimbal lock
-          if (beta > 85) beta = 85;   // Limit looking up
-          if (beta < -85) beta = -85;  // Limit looking down
+          // Beta already clamped above before sending
           
           // Calculate target rotation (calibration offset already applied)
           const targetRotation = {

@@ -78,7 +78,7 @@
 
     // Smoothing for viewer camera
     let currentRotation = { x: 0, y: 0, z: 0 };
-    const smoothingFactor = 0.15; // Lower = smoother but more lag
+    const smoothingFactor = 0.3; // Lower = smoother but more lag
 
     socket.on('motion-data', (data) => {
       status.textContent = 'Receiving motion data';
@@ -94,9 +94,7 @@
         let beta = parseFloat(data.beta);
         const gamma = parseFloat(data.gamma);
         
-        // Clamp beta to prevent gimbal lock (match expert's clamping)
-        if (beta > 85) beta = 85;    // Limit looking up
-        if (beta < -85) beta = -85;  // Limit looking down
+        // Beta already clamped by expert before transmission
         
         // Calculate target rotation (values already calibrated by expert)
         const targetRotation = {
