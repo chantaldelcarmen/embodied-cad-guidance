@@ -95,13 +95,13 @@
         const gamma = parseFloat(data.gamma);
         
         // Clamp beta to prevent gimbal lock (match expert's clamping)
-        if (beta > 150) beta = 150;
-        if (beta < 30) beta = 30;
+        if (beta > 60) beta = 60;    // Limit looking up
+        if (beta < -60) beta = -60;  // Limit looking down
         
-        // Calculate target rotation
+        // Calculate target rotation (values already calibrated by expert)
         const targetRotation = {
-          x: beta - 90,
-          y: -alpha,
+          x: beta,     // tilt already calibrated
+          y: -alpha,   // turn already calibrated
           z: 0
         };
         
