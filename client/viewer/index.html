@@ -90,9 +90,14 @@
     </a-entity>
 
     <!-- Ghost camera: shows expert's current gaze direction -->
-    <a-entity id="ghost-rig" position="0 2.5 -3" visible="false">
-      <a-cone color="#4CC3D9" opacity="0.7" radius-bottom="0.12" radius-top="0" height="0.35" rotation="-90 0 0"></a-cone>
-      <a-text value="Expert" align="center" position="0 0.3 0" scale="0.5 0.5 0.5" color="white"></a-text>
+    <a-entity id="ghost-rig" position="0 2.5 0" visible="false">
+      <!-- Small sphere as the "head" origin -->
+      <a-sphere color="#4CC3D9" radius="0.1" opacity="0.9"></a-sphere>
+      <!-- Long rod pointing in the look direction -->
+      <a-cylinder color="#4CC3D9" opacity="0.8" radius="0.03" height="2" position="0 0 -1" rotation="90 0 0"></a-cylinder>
+      <!-- Arrow tip -->
+      <a-cone color="#4CC3D9" opacity="0.9" radius-bottom="0.08" radius-top="0" height="0.2" position="0 0 -2" rotation="90 0 0"></a-cone>
+      <a-text value="Expert" align="center" position="0 0.25 0" scale="0.6 0.6 0.6" color="white"></a-text>
     </a-entity>
   </a-scene>
 
