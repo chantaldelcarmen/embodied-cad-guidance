@@ -278,17 +278,20 @@
     function lockView() {
       viewLocked = !viewLocked;
       const btn = document.getElementById('lockViewBtn');
+      const camera = document.querySelector('a-camera');
       if (viewLocked) {
         const snapData = { x: currentTilt, y: currentHeading, z: 0 };
         socket.emit('snap-view', snapData);
         btn.textContent = '🔓 Unlock View';
         btn.style.background = '#888';
         status.textContent = '📌 View locked';
+        if (camera) camera.setAttribute('look-controls', 'enabled', false);
       } else {
         socket.emit('unlock-view');
         btn.textContent = '📌 Lock This View for Novice';
         btn.style.background = '#EF2D5E';
         status.textContent = 'Streaming motion data...';
+        if (camera) camera.setAttribute('look-controls', 'enabled', true);
       }
     }
 
