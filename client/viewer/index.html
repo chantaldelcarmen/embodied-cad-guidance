@@ -119,6 +119,7 @@
       }
       followExpert = !followExpert;
       const btn = document.getElementById('follow-btn');
+      if (!ghostRig) ghostRig = document.querySelector('#ghost-rig');
       if (followExpert) {
         btn.textContent = '👁 Following Expert';
         btn.style.background = '#4CC3D9';
