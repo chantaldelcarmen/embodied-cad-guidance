@@ -102,6 +102,11 @@
     let followExpert = true;
 
     function toggleFollow() {
+      if (viewLocked) {
+        status.textContent = 'View locked by expert — cannot explore freely';
+        setTimeout(() => { status.textContent = '📌 View locked by expert'; }, 2000);
+        return;
+      }
       followExpert = !followExpert;
       const btn = document.getElementById('follow-btn');
       if (followExpert) {
