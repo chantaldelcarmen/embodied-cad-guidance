@@ -194,7 +194,7 @@
         Gamma: ${data.gamma}°
       `;
 
-      if (cameraRig && followExpert) {
+      if (cameraRig && followExpert && !viewLocked) {
         const targetRotation = {
           x: parseFloat(data.beta),
           y: parseFloat(data.alpha),
@@ -209,16 +209,18 @@
       }
     });
 
-    // --- Snap-to-view ---
+    // --- Snap-to-view / lock ---
+    let viewLocked = false;
+
     socket.on('snap-view', (data) => {
       if (!cameraRig) return;
 
-      // Instantly jump camera to expert's locked viewpoint
+      viewLocked = true;
+
       const snapRotation = { x: data.x, y: data.y, z: 0 };
       currentRotation = { ...snapRotation };
       cameraRig.setAttribute('rotation', snapRotation);
 
-      // If they were exploring freely, switch them back to following
       if (!followExpert) {
         followExpert = true;
         const btn = document.getElementById('follow-btn');
@@ -226,17 +228,17 @@
         btn.style.background = '#4CC3D9';
       }
 
-      // Visual flash feedback
       snapFlash.classList.add('active');
       setTimeout(() => snapFlash.classList.remove('active'), 300);
 
-      // Sound feedback
       playSnapSound();
 
-      status.textContent = '📌 Expert locked this view';
-      setTimeout(() => {
-        status.textContent = 'Receiving motion data';
-      }, 2000);
+      status.textContent = '📌 View locked by expert';
+    });
+
+    socket.on('unlock-view', () => {
+      viewLocked = false;
+      status.textContent = 'Receiving motion data';
     });
 
     socket.on('connect', () => {
