@@ -55,6 +55,18 @@
   <!-- Flash overlay for snap-to-view feedback -->
   <div id="snap-flash"></div>
 
+  <!-- Enter overlay -->
+  <div id="enter-overlay" style="
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7); display: flex; align-items: center;
+    justify-content: center; z-index: 2000;">
+    <button onclick="enterExperience()" style="
+      padding: 20px 40px; font-size: 24px; background: #4CC3D9;
+      color: white; border: none; border-radius: 12px; cursor: pointer;">
+      Enter
+    </button>
+  </div>
+
   <!-- UI Overlay -->
   <div id="ui-overlay">
     <div id="status">Waiting for motion data...</div>
@@ -112,6 +124,11 @@
       return audioCtx;
     }
 
+    function enterExperience() {
+      getAudioCtx();
+      document.getElementById('enter-overlay').style.display = 'none';
+    }
+
     // Short soft beep for highlight
     function playHighlightSound() {
       const ctx = getAudioCtx();
@@ -163,8 +180,6 @@
         });
       }
 
-      // Unlock AudioContext on first user interaction (browser requirement)
-      document.body.addEventListener('click', () => getAudioCtx(), { once: true });
     });
 
     // --- Camera smoothing ---
