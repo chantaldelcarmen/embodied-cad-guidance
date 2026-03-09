@@ -245,10 +245,15 @@
           if (obj) obj.setAttribute('color', originalColors[id]);
         });
         const pipe = document.querySelector('#pipe');
-        if (pipe) pipe.removeAttribute('material');
+        if (pipe) pipe.object3D.traverse(node => { if (node.isMesh) node.material.color.set('#aaaaaa'); });
 
         if (objectId === 'pipe') {
-          object.setAttribute('material', 'color: #FFFF00');
+          object.object3D.traverse(node => {
+            if (node.isMesh) {
+              node.material = node.material.clone();
+              node.material.color.set('#FFFF00');
+            }
+          });
         } else {
           object.setAttribute('color', '#FFFF00');
         }

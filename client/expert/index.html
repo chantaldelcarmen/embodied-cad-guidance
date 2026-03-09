@@ -305,12 +305,17 @@
       if (object) {
         document.querySelectorAll('.clickable').forEach(obj => {
           const id = obj.getAttribute('id');
-          if (id === 'pipe') obj.removeAttribute('material');
+          if (id === 'pipe') obj.object3D.traverse(node => { if (node.isMesh) node.material.color.set('#aaaaaa'); });
           if (id === 'cylinder') obj.setAttribute('color', '#FFC65D');
           if (id === 'sphere') obj.setAttribute('color', '#EF2D5E');
         });
         if (objectId === 'pipe') {
-          object.setAttribute('material', 'color: #FFFF00');
+          object.object3D.traverse(node => {
+            if (node.isMesh) {
+              node.material = node.material.clone();
+              node.material.color.set('#FFFF00');
+            }
+          });
         } else {
           object.setAttribute('color', '#FFFF00');
         }
