@@ -36,6 +36,35 @@
     }
     #follow-btn:hover { opacity: 0.85; }
 
+    /* Expert compass */
+    #expert-compass {
+      display: none;
+      margin-top: 10px;
+      text-align: center;
+      font-size: 11px;
+      color: #aaa;
+    }
+    #compass-ring {
+      width: 60px;
+      height: 60px;
+      border: 2px solid #4CC3D9;
+      border-radius: 50%;
+      margin: 6px auto 2px;
+      position: relative;
+    }
+    #compass-arrow {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 0; height: 0;
+      transform-origin: center bottom;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 24px solid #4CC3D9;
+      margin-left: -5px;
+      margin-top: -24px;
+      transition: transform 0.1s ease;
+    }
+
     /* Snap flash overlay */
     #snap-flash {
       position: fixed;
@@ -72,6 +101,12 @@
     <div id="status">Waiting for motion data...</div>
     <div id="data"></div>
     <button id="follow-btn" onclick="toggleFollow()">👁 Following Expert</button>
+    <div id="expert-compass">
+      Expert gaze
+      <div id="compass-ring">
+        <div id="compass-arrow"></div>
+      </div>
+    </div>
   </div>
 
   <!-- A-Frame Scene -->
@@ -89,14 +124,6 @@
       <a-camera id="camera" position="0 0 0" look-controls="enabled: false"></a-camera>
     </a-entity>
 
-    <!-- Ghost camera: shows expert's current gaze direction -->
-    <a-entity id="ghost-rig" position="0 1.6 0" visible="false">
-      <!-- Long rod pointing in the look direction -->
-      <a-cylinder color="#4CC3D9" opacity="0.8" radius="0.03" height="2" position="0 0 -1" rotation="90 0 0"></a-cylinder>
-      <!-- Arrow tip -->
-      <a-cone color="#4CC3D9" opacity="0.9" radius-bottom="0.08" radius-top="0" height="0.2" position="0 0 -2" rotation="90 0 0"></a-cone>
-      <a-text value="Expert" align="center" position="0 0.25 -2" scale="0.6 0.6 0.6" color="white"></a-text>
-    </a-entity>
   </a-scene>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -106,7 +133,6 @@
     const dataDiv = document.getElementById('data');
     const snapFlash = document.getElementById('snap-flash');
     let cameraRig = null;
-    let ghostRig = null;
 
     // --- Follow toggle ---
     let followExpert = true;
@@ -125,6 +151,10 @@
       } else {
         btn.textContent = '🔓 Exploring Freely';
         btn.style.background = '#888';
+        document.getElementById('expert-compass').style.display = 'block';
+      }
+      if (followExpert) {
+        document.getElementById('expert-compass').style.display = 'none';
       }
     }
 
@@ -191,11 +221,9 @@
       const scene = document.querySelector('a-scene');
       if (scene.hasLoaded) {
         cameraRig = document.querySelector('#camera-rig');
-        ghostRig = document.querySelector('#ghost-rig');
       } else {
         scene.addEventListener('loaded', () => {
           cameraRig = document.querySelector('#camera-rig');
-          ghostRig = document.querySelector('#ghost-rig');
         });
       }
 
@@ -227,14 +255,10 @@
         cameraRig.setAttribute('rotation', currentRotation);
       }
 
-      // Always update ghost to show expert's current orientation
-      if (ghostRig) {
-        ghostRig.setAttribute('visible', true);
-        ghostRig.setAttribute('rotation', {
-          x: parseFloat(data.beta),
-          y: parseFloat(data.alpha),
-          z: 0
-        });
+      // Always update compass arrow with expert's heading
+      const arrow = document.getElementById('compass-arrow');
+      if (arrow) {
+        arrow.style.transform = `translateX(-50%) rotate(${parseFloat(data.alpha)}deg)`;
       }
     });
 
