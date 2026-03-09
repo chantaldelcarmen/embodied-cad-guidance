@@ -86,7 +86,13 @@
     <a-sphere id="sphere" position="-2 1.25 -3" radius="0.5" color="#EF2D5E"></a-sphere>
 
     <a-entity id="camera-rig" position="0 1.6 0">
-      <a-camera id="camera" position="0 0 0"></a-camera>
+      <a-camera id="camera" position="0 0 0" look-controls="enabled: false"></a-camera>
+    </a-entity>
+
+    <!-- Ghost camera: shows expert's current gaze direction -->
+    <a-entity id="ghost-rig" position="0 2.5 -3" visible="false">
+      <a-cone color="#4CC3D9" opacity="0.7" radius-bottom="0.12" radius-top="0" height="0.35" rotation="-90 0 0"></a-cone>
+      <a-text value="Expert" align="center" position="0 0.3 0" scale="0.5 0.5 0.5" color="white"></a-text>
     </a-entity>
   </a-scene>
 
@@ -97,6 +103,7 @@
     const dataDiv = document.getElementById('data');
     const snapFlash = document.getElementById('snap-flash');
     let cameraRig = null;
+    let ghostRig = null;
 
     // --- Follow toggle ---
     let followExpert = true;
@@ -132,6 +139,8 @@
     function enterExperience() {
       getAudioCtx();
       document.getElementById('enter-overlay').style.display = 'none';
+      const camera = document.querySelector('a-camera');
+      if (camera) camera.setAttribute('look-controls', 'enabled', true);
     }
 
     // Short soft beep for highlight
@@ -179,9 +188,11 @@
       const scene = document.querySelector('a-scene');
       if (scene.hasLoaded) {
         cameraRig = document.querySelector('#camera-rig');
+        ghostRig = document.querySelector('#ghost-rig');
       } else {
         scene.addEventListener('loaded', () => {
           cameraRig = document.querySelector('#camera-rig');
+          ghostRig = document.querySelector('#ghost-rig');
         });
       }
 
@@ -211,6 +222,16 @@
         currentRotation.z = 0;
 
         cameraRig.setAttribute('rotation', currentRotation);
+      }
+
+      // Always update ghost to show expert's current orientation
+      if (ghostRig) {
+        ghostRig.setAttribute('visible', true);
+        ghostRig.setAttribute('rotation', {
+          x: parseFloat(data.beta),
+          y: parseFloat(data.alpha),
+          z: 0
+        });
       }
     });
 
