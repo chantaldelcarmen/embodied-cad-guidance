@@ -33,6 +33,10 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("snap-view", data);
   });
 
+  socket.on("unlock-view", () => {
+    socket.broadcast.emit("unlock-view");
+  });
+
   socket.on("disconnect", () => {
     console.log("client disconnected");
   });

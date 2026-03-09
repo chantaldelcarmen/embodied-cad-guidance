@@ -134,16 +134,12 @@
   <div id="ui-overlay">
     <button id="startBtn">Start Motion Capture</button>
     <div id="status">Ready</div>
-    <div id="data"></div>
+    <div id="data" style="display:none;"></div>
     
     <div class="controls" id="controls" style="display: none;">
       <!-- Lock View button -->
       <button id="lockViewBtn" onclick="lockView()">📌 Lock This View for Novice</button>
 
-      <h2>Fallback Controls</h2>
-      <button class="highlight-btn" onclick="highlightObject('pipe')">Highlight Pipe</button>
-      <button class="highlight-btn" onclick="highlightObject('cylinder')">Highlight Cylinder</button>
-      <button class="highlight-btn" onclick="highlightObject('sphere')">Highlight Sphere</button>
     </div>
 
     <div id="tap-hint" style="display: none;">👆 Tap objects to highlight | 📌 Lock view to teach</div>
@@ -161,6 +157,7 @@
 
     let currentHeading = 0;
     let currentTilt = 0;
+    let viewLocked = false;
 
     document.addEventListener('DOMContentLoaded', () => {
       scene = document.querySelector('a-scene');
@@ -252,6 +249,7 @@
         currentTilt = currentBeta;
 
         if (now - lastUpdate < throttleDelay) return;
+        if (viewLocked) return;
         lastUpdate = now;
 
         const data = {
@@ -261,6 +259,7 @@
         };
 
         socket.emit('motion-data', data);
+        dataDiv.style.display = 'block';
         dataDiv.textContent = 'heading: ' + data.alpha + 'deg  tilt: ' + data.beta + 'deg';
 
         if (cameraRig) {
@@ -277,16 +276,20 @@
 
     // Send snap-to-view event with current rotation
     function lockView() {
-      const snapData = {
-        x: currentTilt,
-        y: currentHeading,
-        z: 0
-      };
-      socket.emit('snap-view', snapData);
-      status.textContent = '📌 View locked for novice!';
-      setTimeout(() => {
+      viewLocked = !viewLocked;
+      const btn = document.getElementById('lockViewBtn');
+      if (viewLocked) {
+        const snapData = { x: currentTilt, y: currentHeading, z: 0 };
+        socket.emit('snap-view', snapData);
+        btn.textContent = '🔓 Unlock View';
+        btn.style.background = '#888';
+        status.textContent = '📌 View locked';
+      } else {
+        socket.emit('unlock-view');
+        btn.textContent = '📌 Lock This View for Novice';
+        btn.style.background = '#EF2D5E';
         status.textContent = 'Streaming motion data...';
-      }, 1500);
+      }
     }
 
     function setupRaycasting() {
