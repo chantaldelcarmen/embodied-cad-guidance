@@ -141,7 +141,7 @@
       <button id="lockViewBtn" onclick="lockView()">📌 Lock This View for Novice</button>
 
       <h2>Fallback Controls</h2>
-      <button class="highlight-btn" onclick="highlightObject('box')">Highlight Box</button>
+      <button class="highlight-btn" onclick="highlightObject('pipe')">Highlight Pipe</button>
       <button class="highlight-btn" onclick="highlightObject('cylinder')">Highlight Cylinder</button>
       <button class="highlight-btn" onclick="highlightObject('sphere')">Highlight Sphere</button>
     </div>
@@ -305,11 +305,15 @@
       if (object) {
         document.querySelectorAll('.clickable').forEach(obj => {
           const id = obj.getAttribute('id');
-          if (id === 'box') obj.setAttribute('color', '#4CC3D9');
+          if (id === 'pipe') obj.removeAttribute('material');
           if (id === 'cylinder') obj.setAttribute('color', '#FFC65D');
           if (id === 'sphere') obj.setAttribute('color', '#EF2D5E');
         });
-        object.setAttribute('color', '#FFFF00');
+        if (objectId === 'pipe') {
+          object.setAttribute('material', 'color: #FFFF00');
+        } else {
+          object.setAttribute('color', '#FFFF00');
+        }
         status.textContent = `Highlighted ${objectId}`;
       }
 

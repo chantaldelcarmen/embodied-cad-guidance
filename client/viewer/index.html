@@ -231,7 +231,6 @@
 
     // --- Highlight ---
     const originalColors = {
-      box: '#4CC3D9',
       cylinder: '#FFC65D',
       sphere: '#EF2D5E'
     };
@@ -245,8 +244,14 @@
           const obj = document.querySelector(`#${id}`);
           if (obj) obj.setAttribute('color', originalColors[id]);
         });
+        const pipe = document.querySelector('#pipe');
+        if (pipe) pipe.removeAttribute('material');
 
-        object.setAttribute('color', '#FFFF00');
+        if (objectId === 'pipe') {
+          object.setAttribute('material', 'color: #FFFF00');
+        } else {
+          object.setAttribute('color', '#FFFF00');
+        }
 
         // Sound feedback on highlight
         playHighlightSound();
