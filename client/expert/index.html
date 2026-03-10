@@ -152,7 +152,7 @@
 
   <div id="hints-overlay">
     <div class="hint-pill">👆 Tap engine to highlight</div>
-    <div class="hint-pill">✌️ Two-finger tap to lock / unlock view</div>
+    <div class="hint-pill">👇 Swipe down to lock / unlock view</div>
     <div class="hint-pill">🤏 Pinch to zoom</div>
   </div>
 
@@ -380,26 +380,26 @@
       setupDoubleTap();
     }
 
-    // --- Two-finger tap to lock/unlock ---
-    let suppressNextHighlight = false;
-
+    // --- Swipe down to lock/unlock ---
     function setupDoubleTap() {
-      let twoFingerStart = 0;
+      let startY = null;
+      let startX = null;
 
       document.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) twoFingerStart = Date.now();
+        if (e.touches.length === 1) {
+          startY = e.touches[0].clientY;
+          startX = e.touches[0].clientX;
+        } else {
+          startY = null;
+        }
       }, { passive: true });
 
       document.addEventListener('touchend', (e) => {
-        if (e.touches.length === 0 && twoFingerStart > 0) {
-          const elapsed = Date.now() - twoFingerStart;
-          twoFingerStart = 0;
-          if (elapsed < 300) {
-            suppressNextHighlight = true;
-            setTimeout(() => { suppressNextHighlight = false; }, 300);
-            lockView();
-          }
-        }
+        if (startY === null) return;
+        const dy = e.changedTouches[0].clientY - startY;
+        const dx = Math.abs(e.changedTouches[0].clientX - startX);
+        startY = null;
+        if (dy > 80 && dx < 60) lockView();
       }, { passive: true });
     }
 
@@ -432,7 +432,6 @@
     }
 
     function highlightObject(objectId) {
-      if (suppressNextHighlight) return;
       document.querySelectorAll('.clickable').forEach(obj => {
         obj.object3D.traverse(node => {
           if (node.isMesh && node.userData.originalColor) node.material.color.copy(node.userData.originalColor);
