@@ -343,7 +343,13 @@
         currentTilt = currentBeta;
 
         if (now - lastUpdate < throttleDelay) return;
-        if (viewLocked) return;
+        if (viewLocked) {
+          const scrubValue = Math.max(0, Math.min(1, currentBeta / 45));
+          scrubAnimation(scrubValue);
+          socket.emit('scrub-animation', { t: scrubValue });
+          lastUpdate = now;
+          return;
+        }
         lastUpdate = now;
 
         const rigPos = cameraRig ? cameraRig.getAttribute('position') : { x: 0, y: 1.6, z: 0 };
@@ -485,6 +491,23 @@
         const dur = clipDuration || 2;
         engine.setAttribute('animation-mixer', `clip: Take 001; loop: once; clampWhenFinished: true; timeScale: -1; startAt: ${dur}`);
       }
+    }
+
+    // --- Scrub animation ---
+    function scrubAnimation(normalized) {
+      const engine = document.querySelector('#engine');
+      if (!engine) return;
+      const dur = clipDuration || 2;
+      if (!engine.getAttribute('animation-mixer')) {
+        engine.setAttribute('animation-mixer', 'clip: Take 001; loop: once; clampWhenFinished: true');
+      }
+      const comp = engine.components['animation-mixer'];
+      if (!comp || !comp.mixer) return;
+      comp.mixer._actions.forEach(action => {
+        action.paused = true;
+        action.time = Math.max(0, Math.min(normalized * dur, dur));
+      });
+      comp.mixer.update(0);
     }
 
     // --- Pinch to zoom ---
