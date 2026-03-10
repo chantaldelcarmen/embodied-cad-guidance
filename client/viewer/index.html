@@ -165,7 +165,7 @@
     </a-entity>
 
     <!-- Ghost arrow: shows expert's gaze when viewer is exploring freely -->
-    <a-entity id="ghost-rig" position="0 3 -1" visible="false">
+    <a-entity id="ghost-rig" position="0 2.2 -2" visible="false">
       <a-sphere color="#4CC3D9" radius="0.08" opacity="0.9"></a-sphere>
       <a-cylinder color="#4CC3D9" opacity="0.7" radius="0.03" height="2" position="0 0 -1" rotation="90 0 0"></a-cylinder>
       <a-cone color="#4CC3D9" opacity="0.9" radius-bottom="0.08" radius-top="0" height="0.2" position="0 0 -2" rotation="90 0 0"></a-cone>
@@ -347,7 +347,7 @@
 
       if (ghostRig) {
         ghostRig.setAttribute('visible', true);
-        ghostRig.setAttribute('rotation', { x: parseFloat(data.beta), y: parseFloat(data.alpha), z: 0 });
+        ghostRig.setAttribute('rotation', { x: parseFloat(data.beta) + 20, y: parseFloat(data.alpha), z: 0 });
       }
     });
 
