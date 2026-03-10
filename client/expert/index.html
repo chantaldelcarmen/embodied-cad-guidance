@@ -412,13 +412,15 @@
         navigator.vibrate && navigator.vibrate([80, 50, 80]);
         playSnapSound();
         setStatus('📌 Locked', 'locked');
-        showToast('📌 View locked', '#EF2D5E');
+        showToast('📌 View locked — tilt to scrub', '#EF2D5E');
         if (camera) camera.setAttribute('look-controls', 'enabled', false);
+        document.getElementById('explodeBtn').style.display = 'none';
       } else {
         socket.emit('unlock-view');
         setStatus('Streaming', 'streaming');
         showToast('🔓 Unlocked', '#555');
         if (camera) camera.setAttribute('look-controls', 'enabled', true);
+        document.getElementById('explodeBtn').style.display = 'block';
       }
     }
 
