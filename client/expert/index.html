@@ -512,6 +512,7 @@
         if (camera) camera.setAttribute('look-controls', 'enabled', false);
         document.getElementById('explodeBtn').style.display = 'none';
         initOrbitFromCamera();
+        updateOrbitCamera();
         document.getElementById('orbit-controls').classList.add('visible');
       } else {
         socket.emit('unlock-view');
@@ -753,10 +754,10 @@
 
     function initOrbitFromCamera() {
       if (!cameraRig) return;
-      const pos = cameraRig.getAttribute('position');
-      const dx = pos.x - MODEL_CENTER.x;
-      const dy = pos.y - MODEL_CENTER.y;
-      const dz = pos.z - MODEL_CENTER.z;
+      const p = cameraRig.object3D.position;
+      const dx = p.x - MODEL_CENTER.x;
+      const dy = p.y - MODEL_CENTER.y;
+      const dz = p.z - MODEL_CENTER.z;
       orbitRadius = Math.sqrt(dx*dx + dy*dy + dz*dz);
       if (orbitRadius < 0.5) orbitRadius = 3;
       orbitAngle = THREE.MathUtils.radToDeg(Math.atan2(dx, dz));
