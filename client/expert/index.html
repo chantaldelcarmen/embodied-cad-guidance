@@ -299,6 +299,7 @@
           const rigPos = cameraRig ? cameraRig.getAttribute('position') : { x: 0, y: 1.6, z: 0 };
         const snapData = { x: currentTilt, y: currentHeading, z: 0, rigX: rigPos.x, rigY: rigPos.y, rigZ: rigPos.z };
         socket.emit('snap-view', snapData);
+        navigator.vibrate && navigator.vibrate([80, 50, 80]);
         btn.textContent = '🔓 Unlock View';
         btn.style.background = '#888';
         status.textContent = '📌 View locked';
@@ -328,10 +329,12 @@
       const btn = document.getElementById('explodeBtn');
       if (exploded) {
         socket.emit('explode-view');
+        navigator.vibrate && navigator.vibrate([50, 30, 50, 30, 100]);
         btn.textContent = '🔧 Assemble';
         btn.style.background = '#888';
       } else {
         socket.emit('assemble-view');
+        navigator.vibrate && navigator.vibrate(80);
         btn.textContent = '💥 Explode Assembly';
         btn.style.background = '#FF8C00';
       }
@@ -411,11 +414,13 @@
         // Toggle off
         currentHighlight = null;
         socket.emit('highlight', { object: null });
+        navigator.vibrate && navigator.vibrate(50);
         status.textContent = 'Highlight cleared';
       } else {
         // Highlight new
         currentHighlight = objectId;
         socket.emit('highlight', { object: objectId });
+        navigator.vibrate && navigator.vibrate(100);
         const object = document.querySelector(`#${objectId}`);
         if (object) {
           object.object3D.traverse(node => {
