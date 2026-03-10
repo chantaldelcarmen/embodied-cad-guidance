@@ -275,13 +275,7 @@
 
     // --- Start ---
     document.getElementById('startBtn').addEventListener('click', async () => {
-      try {
-        const ctx = getAudioCtx();
-        await ctx.resume();
-        const buf = ctx.createBuffer(1, 1, 22050);
-        const src = ctx.createBufferSource();
-        src.buffer = buf; src.connect(ctx.destination); src.start(0);
-      } catch (e) { /* audio unlock failed — continue */ }
+      getAudioCtx();
       try {
         if (typeof DeviceOrientationEvent.requestPermission === 'function') {
           const op = await DeviceOrientationEvent.requestPermission();

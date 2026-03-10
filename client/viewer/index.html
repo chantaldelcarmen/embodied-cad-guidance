@@ -493,7 +493,7 @@
 
     ['left', 'right', 'up', 'down'].forEach(dir => {
       const btn = document.getElementById('orbit-' + dir);
-      btn.addEventListener('touchstart', (e) => { e.stopPropagation(); if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); startOrbit(dir); }, { passive: true });
+      btn.addEventListener('touchstart', (e) => { e.stopPropagation(); startOrbit(dir); }, { passive: true });
       btn.addEventListener('touchend',   (e) => { e.stopPropagation(); stopOrbit(); }, { passive: true });
       btn.addEventListener('touchcancel', stopOrbit, { passive: true });
       btn.addEventListener('mousedown', () => startOrbit(dir));
