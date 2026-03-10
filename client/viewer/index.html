@@ -525,7 +525,7 @@
       stopOrbit();
       snapFlash.classList.add('active');
       setTimeout(() => snapFlash.classList.remove('active'), 300);
-      navigator.vibrate && navigator.vibrate([80, 50, 80]);
+      navigator.vibrate && navigator.vibrate([150, 60, 150, 60, 150]);
       playSnapSound();
       setStatus('📌 View locked', 'locked');
     });
@@ -565,7 +565,7 @@
         return;
       }
       if (data.object === 'engine') highlightEngine();
-      navigator.vibrate && navigator.vibrate(100);
+      navigator.vibrate && navigator.vibrate(200);
       playHighlightSound();
       showToast(`Highlighting: ${data.object}`, '#4CC3D9', 2000);
     });
@@ -587,8 +587,8 @@
       }, 50);
     }
 
-    socket.on('explode-view', () => { navigator.vibrate && navigator.vibrate([50, 30, 50, 30, 100]); playExplodeSound(); playAnimation(true); });
-    socket.on('assemble-view', () => { navigator.vibrate && navigator.vibrate(80); playAssembleSound(); playAnimation(false); });
+    socket.on('explode-view', () => { navigator.vibrate && navigator.vibrate([100, 40, 100, 40, 200]); playExplodeSound(); playAnimation(true); });
+    socket.on('assemble-view', () => { navigator.vibrate && navigator.vibrate(150); playAssembleSound(); playAnimation(false); });
 
     socket.on('scrub-animation', (data) => { scrubAnimation(data.t); });
 
@@ -616,7 +616,7 @@
       if (e.touches.length === 1) {
         longPressTimer = setTimeout(() => {
           toggleFollow();
-          navigator.vibrate && navigator.vibrate(50);
+          navigator.vibrate && navigator.vibrate(120);
           longPressTimer = null;
         }, 700);
       } else {

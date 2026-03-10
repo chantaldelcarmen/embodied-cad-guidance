@@ -409,7 +409,7 @@
       if (viewLocked) {
         const rigPos = cameraRig ? cameraRig.getAttribute('position') : { x: 0, y: 1.6, z: 0 };
         socket.emit('snap-view', { x: currentTilt, y: currentHeading, z: 0, rigX: rigPos.x, rigY: rigPos.y, rigZ: rigPos.z });
-        navigator.vibrate && navigator.vibrate([80, 50, 80]);
+        navigator.vibrate && navigator.vibrate([150, 60, 150, 60, 150]);
         playSnapSound();
         setStatus('📌 Locked', 'locked');
         showToast('📌 View locked — tilt to scrub', '#EF2D5E');
@@ -443,12 +443,12 @@
       if (currentHighlight === objectId) {
         currentHighlight = null;
         socket.emit('highlight', { object: null });
-        navigator.vibrate && navigator.vibrate(50);
+        navigator.vibrate && navigator.vibrate(120);
         showToast('Highlight cleared', '#555', 1500);
       } else {
         currentHighlight = objectId;
         socket.emit('highlight', { object: objectId });
-        navigator.vibrate && navigator.vibrate(100);
+        navigator.vibrate && navigator.vibrate(200);
         playHighlightSound();
         const object = document.querySelector(`#${objectId}`);
         if (object) {
@@ -470,7 +470,7 @@
       btn.disabled = true;
       btn.style.background = '#888';
       socket.emit('explode-view');
-      navigator.vibrate && navigator.vibrate([50, 30, 50, 30, 100]);
+      navigator.vibrate && navigator.vibrate([100, 40, 100, 40, 200]);
       playExplodeSound();
       playAnimation(true);
     }
