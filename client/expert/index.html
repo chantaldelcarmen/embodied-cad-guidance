@@ -664,6 +664,7 @@
     }
 
     // --- Pinch to zoom ---
+    const MODEL_CENTER = { x: -0.010, y: 1.550, z: -3 };
     let lastPinchDist = null;
 
     function getPinchDist(touches) {
@@ -723,7 +724,6 @@
     document.addEventListener('touchend', () => { lastPinchDist = null; });
 
     // --- Orbit controls (shown when locked) ---
-    const MODEL_CENTER = { x: -0.010, y: 1.550, z: -3 };
     let orbitAngle = 0, orbitElevation = 15, orbitRadius = 3, orbitRaf = null;
 
     function initOrbitFromCamera() {
