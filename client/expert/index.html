@@ -173,6 +173,10 @@
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       return audioCtx;
     }
+    // Fallback: resume suspended context on any touch (iOS)
+    document.addEventListener('touchstart', () => {
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }, { passive: true });
     function playHighlightSound() {
       const ctx = getAudioCtx();
       const osc = ctx.createOscillator(); const gain = ctx.createGain();
@@ -271,7 +275,13 @@
 
     // --- Start ---
     document.getElementById('startBtn').addEventListener('click', async () => {
-      getAudioCtx();
+      try {
+        const ctx = getAudioCtx();
+        await ctx.resume();
+        const buf = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = buf; src.connect(ctx.destination); src.start(0);
+      } catch (e) { /* audio unlock failed — continue */ }
       try {
         if (typeof DeviceOrientationEvent.requestPermission === 'function') {
           const op = await DeviceOrientationEvent.requestPermission();
