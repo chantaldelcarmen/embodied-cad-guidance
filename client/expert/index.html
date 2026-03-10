@@ -381,6 +381,8 @@
     }
 
     // --- Two-finger tap to lock/unlock ---
+    let suppressNextHighlight = false;
+
     function setupDoubleTap() {
       let twoFingerStart = 0;
 
@@ -392,7 +394,11 @@
         if (e.touches.length === 0 && twoFingerStart > 0) {
           const elapsed = Date.now() - twoFingerStart;
           twoFingerStart = 0;
-          if (elapsed < 300) lockView();
+          if (elapsed < 300) {
+            suppressNextHighlight = true;
+            setTimeout(() => { suppressNextHighlight = false; }, 300);
+            lockView();
+          }
         }
       }, { passive: true });
     }
@@ -426,6 +432,7 @@
     }
 
     function highlightObject(objectId) {
+      if (suppressNextHighlight) return;
       document.querySelectorAll('.clickable').forEach(obj => {
         obj.object3D.traverse(node => {
           if (node.isMesh && node.userData.originalColor) node.material.color.copy(node.userData.originalColor);
