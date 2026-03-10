@@ -540,6 +540,19 @@
     });
 
     // --- Highlight ---
+    const PART_GROUPS = {
+      pistons:  ['Piston'],
+      lids:     ['Lid'],
+      rings:    ['Ring'],
+      plates:   ['Plate'],
+      bolts:    ['Bolt', 'Nut'],
+      housing:  ['polySurface'],
+    };
+
+    function meshMatchesPart(meshName, partKey) {
+      return PART_GROUPS[partKey].some(prefix => meshName.startsWith(prefix));
+    }
+
     function resetEngineColor() {
       const engine = document.querySelector('#engine');
       if (engine) engine.object3D.traverse(node => {
@@ -558,16 +571,30 @@
       });
     }
 
+    function highlightPart(partKey) {
+      const engine = document.querySelector('#engine');
+      if (!engine) return;
+      engine.object3D.traverse(node => {
+        if (node.isMesh && meshMatchesPart(node.name, partKey)) {
+          if (!node.userData.originalColor) node.userData.originalColor = node.material.color.clone();
+          node.material = node.material.clone();
+          node.material.color.set('#FFFF00');
+        }
+      });
+    }
+
     socket.on('highlight', (data) => {
       resetEngineColor();
-      if (!data.object) {
+      if (!data.object && !data.part) {
         showToast('Highlight cleared', '#555', 1500);
         return;
       }
       if (data.object === 'engine') highlightEngine();
+      if (data.part) highlightPart(data.part);
       navigator.vibrate && navigator.vibrate(200);
       playHighlightSound();
-      showToast(`Highlighting: ${data.object}`, '#4CC3D9', 2000);
+      const label = data.part || data.object;
+      showToast(`Highlighting: ${label}`, '#4CC3D9', 2000);
     });
 
     // --- Explode/Assemble ---

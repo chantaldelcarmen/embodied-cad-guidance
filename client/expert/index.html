@@ -95,6 +95,36 @@
       text-align: center;
     }
 
+    /* Part highlight buttons — bottom center, above explode */
+    #part-controls {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 90px);
+      left: 0;
+      right: 0;
+      display: none;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 16px;
+      z-index: 1000;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    #part-controls.visible { display: flex; }
+    .part-btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: none;
+      background: rgba(0,0,0,0.5);
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .part-btn.active { background: #FFFF00; color: black; }
+    .part-btn:active { opacity: 0.7; }
+
     /* Orbit D-pad — bottom right, shown when locked */
     #orbit-controls {
       position: fixed;
@@ -191,6 +221,15 @@
     <button class="orbit-btn" id="orbit-left">◄</button>
     <button class="orbit-btn" id="orbit-right">►</button>
     <button class="orbit-btn" id="orbit-down">▼</button>
+  </div>
+
+  <div id="part-controls">
+    <button class="part-btn" data-part="pistons">Pistons</button>
+    <button class="part-btn" data-part="lids">Lids</button>
+    <button class="part-btn" data-part="rings">Rings</button>
+    <button class="part-btn" data-part="plates">Plates</button>
+    <button class="part-btn" data-part="bolts">Bolts</button>
+    <button class="part-btn" data-part="housing">Housing</button>
   </div>
 
   <div id="bottom-controls">
@@ -301,6 +340,9 @@
       engine.addEventListener('model-loaded', () => {
         const clips = engine.object3D.animations;
         if (clips && clips.length > 0) clipDuration = clips[0].duration;
+        const meshNames = [];
+        engine.object3D.traverse(node => { if (node.isMesh) meshNames.push(node.name); });
+        console.log('Mesh names:', JSON.stringify(meshNames));
       });
       engine.addEventListener('animation-finished', () => {
         const btn = document.getElementById('explodeBtn');
@@ -330,6 +372,7 @@
     function startListening() {
       document.getElementById('start-overlay').style.display = 'none';
       document.getElementById('bottom-controls').style.display = 'block';
+      document.getElementById('part-controls').classList.add('visible');
       document.getElementById('hints-btn').style.display = 'block';
       setStatus('Streaming', 'streaming');
       showHints();
@@ -392,6 +435,7 @@
         }
         lastUpdate = now;
 
+        if (headingDeg === null) return;
         const rigPos = cameraRig ? cameraRig.getAttribute('position') : { x: 0, y: 1.6, z: 0 };
         socket.emit('motion-data', {
           alpha: headingDeg.toFixed(1),
@@ -466,19 +510,39 @@
     // --- Highlight ---
     let currentHighlight = null;
 
+    const PART_GROUPS = {
+      pistons:  ['Piston'],
+      lids:     ['Lid'],
+      rings:    ['Ring'],
+      plates:   ['Plate'],
+      bolts:    ['Bolt', 'Nut'],
+      housing:  ['polySurface'],
+    };
+
+    function meshMatchesPart(meshName, partKey) {
+      return PART_GROUPS[partKey].some(prefix => meshName.startsWith(prefix));
+    }
+
+    function resetAllHighlights() {
+      const engine = document.querySelector('#engine');
+      if (!engine) return;
+      engine.object3D.traverse(node => {
+        if (node.isMesh && node.userData.originalColor) node.material.color.copy(node.userData.originalColor);
+      });
+      document.querySelectorAll('.part-btn').forEach(b => b.classList.remove('active'));
+    }
+
     function setupRaycasting() {
       document.querySelectorAll('.clickable').forEach(obj => {
         obj.addEventListener('click', () => highlightObject(obj.id));
       });
+      document.querySelectorAll('.part-btn').forEach(btn => {
+        btn.addEventListener('click', () => highlightPart(btn.dataset.part));
+      });
     }
 
     function highlightObject(objectId) {
-      document.querySelectorAll('.clickable').forEach(obj => {
-        obj.object3D.traverse(node => {
-          if (node.isMesh && node.userData.originalColor) node.material.color.copy(node.userData.originalColor);
-        });
-      });
-
+      resetAllHighlights();
       if (currentHighlight === objectId) {
         currentHighlight = null;
         socket.emit('highlight', { object: null });
@@ -501,6 +565,34 @@
           showToast(`Highlighted`, '#4CC3D9', 1500);
         }
       }
+    }
+
+    function highlightPart(partKey) {
+      resetAllHighlights();
+      if (currentHighlight === partKey) {
+        currentHighlight = null;
+        socket.emit('highlight', { part: null });
+        navigator.vibrate && navigator.vibrate(120);
+        showToast('Highlight cleared', '#555', 1500);
+        return;
+      }
+      currentHighlight = partKey;
+      socket.emit('highlight', { part: partKey });
+      navigator.vibrate && navigator.vibrate(200);
+      playHighlightSound();
+      const engine = document.querySelector('#engine');
+      if (engine) {
+        engine.object3D.traverse(node => {
+          if (node.isMesh && meshMatchesPart(node.name, partKey)) {
+            if (!node.userData.originalColor) node.userData.originalColor = node.material.color.clone();
+            node.material = node.material.clone();
+            node.material.color.set('#FFFF00');
+          }
+        });
+      }
+      const btn = document.querySelector(`.part-btn[data-part="${partKey}"]`);
+      if (btn) btn.classList.add('active');
+      showToast(`Highlighted: ${partKey}`, '#4CC3D9', 1500);
     }
 
     // --- Explode ---
