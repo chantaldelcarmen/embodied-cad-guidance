@@ -578,14 +578,18 @@
         moveForward(delta * 0.008);
         if (cameraRig) {
           const rigPos = cameraRig.getAttribute('position');
-          socket.emit('motion-data', {
-            alpha: currentHeading.toFixed(1),
-            beta: currentTilt.toFixed(1),
-            gamma: '0',
-            rigX: rigPos.x.toFixed(3),
-            rigY: rigPos.y.toFixed(3),
-            rigZ: rigPos.z.toFixed(3)
-          });
+          if (viewLocked) {
+            socket.emit('view-update', { rigX: rigPos.x, rigY: rigPos.y, rigZ: rigPos.z });
+          } else {
+            socket.emit('motion-data', {
+              alpha: currentHeading.toFixed(1),
+              beta: currentTilt.toFixed(1),
+              gamma: '0',
+              rigX: rigPos.x.toFixed(3),
+              rigY: rigPos.y.toFixed(3),
+              rigZ: rigPos.z.toFixed(3)
+            });
+          }
         }
       }
     }, { passive: false });
