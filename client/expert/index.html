@@ -354,30 +354,40 @@
       });
     }
 
-    function highlightObject(objectId) {
-      socket.emit('highlight', { object: objectId });
+    let currentHighlight = null;
 
-      const object = document.querySelector(`#${objectId}`);
-      if (object) {
-        // Reset all clickables
-        document.querySelectorAll('.clickable').forEach(obj => {
-          obj.object3D.traverse(node => {
-            if (node.isMesh && node.userData.originalColor) {
-              node.material.color.copy(node.userData.originalColor);
-            }
-          });
-        });
-        // Highlight selected
-        object.object3D.traverse(node => {
-          if (node.isMesh) {
-            if (!node.userData.originalColor) {
-              node.userData.originalColor = node.material.color.clone();
-            }
-            node.material = node.material.clone();
-            node.material.color.set('#FFFF00');
+    function highlightObject(objectId) {
+      // Reset all
+      document.querySelectorAll('.clickable').forEach(obj => {
+        obj.object3D.traverse(node => {
+          if (node.isMesh && node.userData.originalColor) {
+            node.material.color.copy(node.userData.originalColor);
           }
         });
-        status.textContent = `Highlighted ${objectId}`;
+      });
+
+      if (currentHighlight === objectId) {
+        // Toggle off
+        currentHighlight = null;
+        socket.emit('highlight', { object: null });
+        status.textContent = 'Highlight cleared';
+      } else {
+        // Highlight new
+        currentHighlight = objectId;
+        socket.emit('highlight', { object: objectId });
+        const object = document.querySelector(`#${objectId}`);
+        if (object) {
+          object.object3D.traverse(node => {
+            if (node.isMesh) {
+              if (!node.userData.originalColor) {
+                node.userData.originalColor = node.material.color.clone();
+              }
+              node.material = node.material.clone();
+              node.material.color.set('#FFFF00');
+            }
+          });
+          status.textContent = `Highlighted ${objectId}`;
+        }
       }
 
       setTimeout(() => {
