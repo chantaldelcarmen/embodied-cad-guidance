@@ -225,6 +225,14 @@
         currentRotation.z = 0;
 
         cameraRig.setAttribute('rotation', currentRotation);
+
+        if (data.rigX !== undefined) {
+          cameraRig.setAttribute('position', {
+            x: parseFloat(data.rigX),
+            y: parseFloat(data.rigY),
+            z: parseFloat(data.rigZ)
+          });
+        }
       }
 
       // Always update ghost rotation once expert connects
@@ -249,6 +257,9 @@
       const snapRotation = { x: data.x, y: data.y, z: 0 };
       currentRotation = { ...snapRotation };
       cameraRig.setAttribute('rotation', snapRotation);
+      if (data.rigX !== undefined) {
+        cameraRig.setAttribute('position', { x: data.rigX, y: data.rigY, z: data.rigZ });
+      }
 
       if (!followExpert) {
         followExpert = true;
@@ -387,7 +398,7 @@
         const dist = getPinchDist(e.touches);
         const delta = dist - lastPinchDist;
         lastPinchDist = dist;
-        moveForward(-delta * 0.008);
+        moveForward(delta * 0.008);
       }
     }, { passive: false });
 
