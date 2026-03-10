@@ -267,6 +267,11 @@
         const clips = engine.object3D.animations;
         if (clips && clips.length > 0) clipDuration = clips[0].duration;
       });
+      engine.addEventListener('animation-finished', () => {
+        const btn = document.getElementById('explodeBtn');
+        btn.disabled = false;
+        btn.style.background = '#FF8C00';
+      });
     });
 
     // --- Start ---
@@ -460,25 +465,14 @@
     }
 
     // --- Explode ---
-    let exploded = false;
-
     function toggleExplode() {
-      exploded = !exploded;
       const btn = document.getElementById('explodeBtn');
-      if (exploded) {
-        socket.emit('explode-view');
-        navigator.vibrate && navigator.vibrate([50, 30, 50, 30, 100]);
-        playExplodeSound();
-        btn.textContent = '🔧 Assemble';
-        btn.style.background = '#888';
-      } else {
-        socket.emit('assemble-view');
-        navigator.vibrate && navigator.vibrate(80);
-        playAssembleSound();
-        btn.textContent = '💥 Explode';
-        btn.style.background = '#FF8C00';
-      }
-      playAnimation(exploded);
+      btn.disabled = true;
+      btn.style.background = '#888';
+      socket.emit('explode-view');
+      navigator.vibrate && navigator.vibrate([50, 30, 50, 30, 100]);
+      playExplodeSound();
+      playAnimation(true);
     }
 
     function playAnimation(forward) {
