@@ -637,10 +637,10 @@
       stopOrbit();
       const step = () => {
         switch (direction) {
-          case 'left':  orbitAngle -= 1.5; break;
-          case 'right': orbitAngle += 1.5; break;
-          case 'up':    orbitElevation = Math.min(orbitElevation + 1.5, 80); break;
-          case 'down':  orbitElevation = Math.max(orbitElevation - 1.5, -20); break;
+          case 'left':  orbitAngle -= 3; break;
+          case 'right': orbitAngle += 3; break;
+          case 'up':    orbitElevation = Math.min(orbitElevation + 2, 80); break;
+          case 'down':  orbitElevation = Math.max(orbitElevation - 2, -20); break;
         }
         updateOrbitCamera();
         orbitRaf = requestAnimationFrame(step);
