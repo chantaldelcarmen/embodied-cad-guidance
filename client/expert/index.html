@@ -95,6 +95,33 @@
       text-align: center;
     }
 
+    /* Orbit D-pad — bottom right, shown when locked */
+    #orbit-controls {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+      right: 16px;
+      display: none;
+      grid-template-areas: ". up ." "left . right" ". down .";
+      grid-template-columns: 50px 50px 50px;
+      grid-template-rows: 50px 50px 50px;
+      gap: 4px;
+      z-index: 1001;
+    }
+    #orbit-controls.visible { display: grid; }
+    .orbit-btn {
+      width: 50px; height: 50px;
+      border-radius: 12px; border: none;
+      background: rgba(0,0,0,0.45); color: white;
+      font-size: 20px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+    }
+    .orbit-btn:active { background: rgba(239,45,94,0.6); }
+    #orbit-up    { grid-area: up; }
+    #orbit-left  { grid-area: left; }
+    #orbit-right { grid-area: right; }
+    #orbit-down  { grid-area: down; }
+
     /* Help button — top right */
     #hints-btn {
       position: fixed;
@@ -153,10 +180,18 @@
   <div id="hints-overlay">
     <div class="hint-pill">👆 Tap engine to highlight</div>
     <div class="hint-pill">👇 Swipe down to lock / unlock view</div>
+    <div class="hint-pill">🔒 When locked: tilt to scrub, arrows to orbit</div>
     <div class="hint-pill">🤏 Pinch to zoom</div>
   </div>
 
   <button id="hints-btn" onclick="showHints()">?</button>
+
+  <div id="orbit-controls">
+    <button class="orbit-btn" id="orbit-up">▲</button>
+    <button class="orbit-btn" id="orbit-left">◄</button>
+    <button class="orbit-btn" id="orbit-right">►</button>
+    <button class="orbit-btn" id="orbit-down">▼</button>
+  </div>
 
   <div id="bottom-controls">
     <button id="explodeBtn" onclick="toggleExplode()">💥 Explode</button>
@@ -415,12 +450,16 @@
         showToast('📌 View locked — tilt to scrub', '#EF2D5E');
         if (camera) camera.setAttribute('look-controls', 'enabled', false);
         document.getElementById('explodeBtn').style.display = 'none';
+        initOrbitFromCamera();
+        document.getElementById('orbit-controls').classList.add('visible');
       } else {
         socket.emit('unlock-view');
         setStatus('Streaming', 'streaming');
         showToast('🔓 Unlocked', '#555');
         if (camera) camera.setAttribute('look-controls', 'enabled', true);
         document.getElementById('explodeBtn').style.display = 'block';
+        stopOrbit();
+        document.getElementById('orbit-controls').classList.remove('visible');
       }
     }
 
@@ -552,6 +591,72 @@
     }, { passive: false });
 
     document.addEventListener('touchend', () => { lastPinchDist = null; });
+
+    // --- Orbit controls (shown when locked) ---
+    const MODEL_CENTER = { x: -0.010, y: 1.550, z: -3 };
+    let orbitAngle = 0, orbitElevation = 15, orbitRadius = 3, orbitRaf = null;
+
+    function initOrbitFromCamera() {
+      if (!cameraRig) return;
+      const pos = cameraRig.getAttribute('position');
+      const dx = pos.x - MODEL_CENTER.x;
+      const dy = pos.y - MODEL_CENTER.y;
+      const dz = pos.z - MODEL_CENTER.z;
+      orbitRadius = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      if (orbitRadius < 0.5) orbitRadius = 3;
+      orbitAngle = THREE.MathUtils.radToDeg(Math.atan2(dx, dz));
+      orbitElevation = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, dy / orbitRadius))));
+    }
+
+    function updateOrbitCamera() {
+      if (!cameraRig) return;
+      const phi = THREE.MathUtils.degToRad(orbitAngle);
+      const theta = THREE.MathUtils.degToRad(orbitElevation);
+      const cosTheta = Math.cos(theta);
+      const x = MODEL_CENTER.x + orbitRadius * Math.sin(phi) * cosTheta;
+      const y = MODEL_CENTER.y + orbitRadius * Math.sin(theta);
+      const z = MODEL_CENTER.z + orbitRadius * Math.cos(phi) * cosTheta;
+      cameraRig.setAttribute('position', { x, y, z });
+      const dist2d = Math.sqrt((MODEL_CENTER.x - x) ** 2 + (MODEL_CENTER.z - z) ** 2);
+      const yawRad = Math.atan2(MODEL_CENTER.x - x, z - MODEL_CENTER.z);
+      const pitchRad = Math.atan2(MODEL_CENTER.y - y, dist2d);
+      cameraRig.object3D.rotation.order = 'YXZ';
+      cameraRig.object3D.rotation.set(pitchRad, yawRad, 0);
+      socket.emit('view-update', {
+        rigX: x, rigY: y, rigZ: z,
+        rotX: THREE.MathUtils.radToDeg(pitchRad),
+        rotY: THREE.MathUtils.radToDeg(yawRad)
+      });
+    }
+
+    function startOrbit(direction) {
+      stopOrbit();
+      const step = () => {
+        switch (direction) {
+          case 'left':  orbitAngle -= 1.5; break;
+          case 'right': orbitAngle += 1.5; break;
+          case 'up':    orbitElevation = Math.min(orbitElevation + 1.5, 80); break;
+          case 'down':  orbitElevation = Math.max(orbitElevation - 1.5, -20); break;
+        }
+        updateOrbitCamera();
+        orbitRaf = requestAnimationFrame(step);
+      };
+      orbitRaf = requestAnimationFrame(step);
+    }
+
+    function stopOrbit() {
+      if (orbitRaf) { cancelAnimationFrame(orbitRaf); orbitRaf = null; }
+    }
+
+    ['left', 'right', 'up', 'down'].forEach(dir => {
+      const btn = document.getElementById('orbit-' + dir);
+      btn.addEventListener('touchstart', (e) => { e.stopPropagation(); startOrbit(dir); }, { passive: true });
+      btn.addEventListener('touchend',   (e) => { e.stopPropagation(); stopOrbit(); }, { passive: true });
+      btn.addEventListener('touchcancel', stopOrbit, { passive: true });
+      btn.addEventListener('mousedown', () => startOrbit(dir));
+      btn.addEventListener('mouseup', stopOrbit);
+      btn.addEventListener('mouseleave', stopOrbit);
+    });
   </script>
 </body>
 </html>

@@ -500,9 +500,9 @@
         currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor;
         currentRotation.z = 0;
         cameraRig.setAttribute('rotation', currentRotation);
-      }
-      if (cameraRig && data.rigX !== undefined) {
-        cameraRig.setAttribute('position', { x: parseFloat(data.rigX), y: parseFloat(data.rigY), z: parseFloat(data.rigZ) });
+        if (data.rigX !== undefined) {
+          cameraRig.setAttribute('position', { x: parseFloat(data.rigX), y: parseFloat(data.rigY), z: parseFloat(data.rigZ) });
+        }
       }
 
       if (ghostRig) {
@@ -591,6 +591,22 @@
     socket.on('assemble-view', () => { navigator.vibrate && navigator.vibrate(150); playAssembleSound(); playAnimation(false); });
 
     socket.on('scrub-animation', (data) => { scrubAnimation(data.t); });
+
+    socket.on('view-update', (data) => {
+      if (!cameraRig) return;
+      if (data.rigX !== undefined) {
+        cameraRig.setAttribute('position', { x: data.rigX, y: data.rigY, z: data.rigZ });
+      }
+      if (data.rotX !== undefined) {
+        cameraRig.object3D.rotation.order = 'YXZ';
+        cameraRig.object3D.rotation.set(
+          THREE.MathUtils.degToRad(data.rotX),
+          THREE.MathUtils.degToRad(data.rotY),
+          0
+        );
+        currentRotation = { x: data.rotX, y: data.rotY, z: 0 };
+      }
+    });
 
     function scrubAnimation(normalized) {
       const engine = document.querySelector('#engine');

@@ -51,6 +51,10 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("scrub-animation", data);
   });
 
+  socket.on("view-update", (data) => {
+    socket.broadcast.emit("view-update", data);
+  });
+
   socket.on("disconnect", () => {
     console.log("client disconnected");
   });
