@@ -384,7 +384,7 @@
 
         if (now - lastUpdate < throttleDelay) return;
         if (viewLocked) {
-          const scrubValue = Math.max(0, Math.min(1, currentBeta / 45));
+          const scrubValue = Math.max(0, Math.min(1, -currentBeta / 45));
           scrubAnimation(scrubValue);
           socket.emit('scrub-animation', { t: scrubValue });
           lastUpdate = now;
