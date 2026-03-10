@@ -352,6 +352,48 @@
 
     socket.on('explode-view', () => { console.log('explode-view received'); playAnimation(true); });
     socket.on('assemble-view', () => { console.log('assemble-view received'); playAnimation(false); });
+
+    // --- Pinch to zoom (move camera along look direction) ---
+    let lastPinchDist = null;
+
+    function getPinchDist(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function moveForward(amount) {
+      const rig = document.querySelector('#camera-rig');
+      if (!rig) return;
+      const pos = rig.getAttribute('position');
+      const rot = rig.getAttribute('rotation');
+      const yaw = THREE.MathUtils.degToRad(rot.y);
+      rig.setAttribute('position', {
+        x: pos.x - Math.sin(yaw) * amount,
+        y: pos.y,
+        z: pos.z - Math.cos(yaw) * amount
+      });
+    }
+
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        lastPinchDist = getPinchDist(e.touches);
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && lastPinchDist !== null) {
+        e.preventDefault();
+        const dist = getPinchDist(e.touches);
+        const delta = dist - lastPinchDist;
+        lastPinchDist = dist;
+        moveForward(-delta * 0.008);
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => {
+      if (lastPinchDist !== null) lastPinchDist = null;
+    });
   </script>
 </body>
 </html>
