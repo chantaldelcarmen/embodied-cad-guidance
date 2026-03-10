@@ -384,6 +384,17 @@
         const delta = dist - lastPinchDist;
         lastPinchDist = dist;
         moveForward(delta * 0.008);
+        if (!viewLocked && cameraRig) {
+          const rigPos = cameraRig.getAttribute('position');
+          socket.emit('motion-data', {
+            alpha: currentHeading.toFixed(1),
+            beta: currentTilt.toFixed(1),
+            gamma: '0',
+            rigX: rigPos.x.toFixed(3),
+            rigY: rigPos.y.toFixed(3),
+            rigZ: rigPos.z.toFixed(3)
+          });
+        }
       }
     }, { passive: false });
 
