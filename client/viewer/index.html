@@ -142,19 +142,18 @@
       width: 100%;
     }
 
-    /* Orbit D-pad — bottom left, shown when exploring freely */
+    /* Orbit D-pad — bottom left */
     #orbit-controls {
       position: fixed;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
       left: 16px;
-      display: none;
+      display: grid;
       grid-template-areas: ". up ." "left . right" ". down .";
       grid-template-columns: 50px 50px 50px;
       grid-template-rows: 50px 50px 50px;
       gap: 4px;
       z-index: 1001;
     }
-    #orbit-controls.visible { display: grid; }
     .orbit-btn {
       width: 50px;
       height: 50px;
@@ -315,14 +314,12 @@
       if (followExpert) {
         setStatus('Following expert', 'connected');
         showToast('👁 Following expert', '#4CC3D9');
-        document.getElementById('orbit-controls').classList.remove('visible');
         stopOrbit();
       } else {
         setStatus('Exploring freely', 'exploring');
         showToast('🔓 Exploring freely', '#888');
         initOrbitFromCamera();
         updateOrbitCamera();
-        document.getElementById('orbit-controls').classList.add('visible');
       }
     }
 
@@ -446,7 +443,7 @@
       const z = MODEL_CENTER.z + orbitRadius * Math.cos(phi) * cosTheta;
       cameraRig.setAttribute('position', { x, y, z });
       const dist2d = Math.sqrt((MODEL_CENTER.x - x) ** 2 + (MODEL_CENTER.z - z) ** 2);
-      const yaw = THREE.MathUtils.radToDeg(Math.atan2(MODEL_CENTER.x - x, MODEL_CENTER.z - z));
+      const yaw = THREE.MathUtils.radToDeg(Math.atan2(MODEL_CENTER.x - x, z - MODEL_CENTER.z));
       const pitch = THREE.MathUtils.radToDeg(Math.atan2(MODEL_CENTER.y - y, dist2d));
       cameraRig.setAttribute('rotation', { x: pitch, y: yaw, z: 0 });
       currentRotation = { x: pitch, y: yaw, z: 0 };
