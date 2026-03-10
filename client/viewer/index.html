@@ -596,7 +596,7 @@
       const engine = document.querySelector('#engine');
       if (!engine) return;
       engine.object3D.traverse(node => {
-        if (node.isMesh && meshMatchesPart(node.name, partKey)) {
+        if (node.isMesh && (partKey === 'all' || meshMatchesPart(node.name, partKey))) {
           if (!node.userData.originalColor) node.userData.originalColor = node.material.color.clone();
           node.material = node.material.clone();
           node.material.color.set('#FFFF00');

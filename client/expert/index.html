@@ -245,6 +245,7 @@
   </div>
 
   <div id="part-controls">
+    <button class="part-btn" data-part="all">All</button>
     <button class="part-btn" data-part="pistons">Pistons</button>
     <button class="part-btn" data-part="lids">Lids</button>
     <button class="part-btn" data-part="rings">Rings</button>
@@ -550,12 +551,7 @@
       document.querySelectorAll('.part-btn').forEach(b => b.classList.remove('active'));
     }
 
-    let suppressNextClick = false;
-
     function setupRaycasting() {
-      document.querySelectorAll('.clickable').forEach(obj => {
-        obj.addEventListener('click', () => highlightObject(obj.id));
-      });
       document.querySelectorAll('.part-btn').forEach(btn => {
         btn.addEventListener('click', () => highlightPart(btn.dataset.part));
       });
@@ -572,7 +568,7 @@
         const dx = Math.abs(e.changedTouches[0].clientX - tapStart.x);
         const dy = Math.abs(e.changedTouches[0].clientY - tapStart.y);
         tapStart = null;
-        if (dx > 20 || dy > 20) return; // swipe, not a tap
+        if (dx > 20 || dy > 20) return;
 
         const touch = e.changedTouches[0];
         const canvas = sceneEl.canvas;
@@ -591,40 +587,10 @@
 
         const hits = raycaster.intersectObjects(meshes, false);
         if (hits.length > 0) {
-          const partKey = Object.keys(PART_GROUPS).find(k => meshMatchesPart(hits[0].object.name, k));
-          if (partKey) {
-            suppressNextClick = true;
-            highlightPart(partKey);
-          }
+          const partKey = Object.keys(PART_GROUPS).find(k => meshMatchesPart(hits[0].object.name, k)) || 'all';
+          highlightPart(partKey);
         }
       }, { passive: true });
-    }
-
-    function highlightObject(objectId) {
-      if (suppressNextClick) { suppressNextClick = false; return; }
-      resetAllHighlights();
-      if (currentHighlight === objectId) {
-        currentHighlight = null;
-        socket.emit('highlight', { object: null });
-        navigator.vibrate && navigator.vibrate(120);
-        showToast('Highlight cleared', '#555', 1500);
-      } else {
-        currentHighlight = objectId;
-        socket.emit('highlight', { object: objectId });
-        navigator.vibrate && navigator.vibrate(200);
-        playHighlightSound();
-        const object = document.querySelector(`#${objectId}`);
-        if (object) {
-          object.object3D.traverse(node => {
-            if (node.isMesh) {
-              if (!node.userData.originalColor) node.userData.originalColor = node.material.color.clone();
-              node.material = node.material.clone();
-              node.material.color.set('#FFFF00');
-            }
-          });
-          showToast(`Highlighted`, '#4CC3D9', 1500);
-        }
-      }
     }
 
     function highlightPart(partKey) {
@@ -643,7 +609,7 @@
       const engine = document.querySelector('#engine');
       if (engine) {
         engine.object3D.traverse(node => {
-          if (node.isMesh && meshMatchesPart(node.name, partKey)) {
+          if (node.isMesh && (partKey === 'all' || meshMatchesPart(node.name, partKey))) {
             if (!node.userData.originalColor) node.userData.originalColor = node.material.color.clone();
             node.material = node.material.clone();
             node.material.color.set('#FFFF00');
