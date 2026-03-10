@@ -68,6 +68,18 @@
       -webkit-tap-highlight-color: transparent;
     }
     #explodeBtn:active { opacity: 0.8; }
+    #homeBtn {
+      padding: 14px 20px;
+      background: rgba(0,0,0,0.45);
+      color: white;
+      border: none;
+      border-radius: 30px;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+      -webkit-tap-highlight-color: transparent;
+    }
+    #homeBtn:active { opacity: 0.7; }
 
     /* Help modal */
     #help-modal {
@@ -258,6 +270,7 @@
   </div>
 
   <div id="bottom-controls">
+    <button id="homeBtn" onclick="resetView()">⌂</button>
     <button id="explodeBtn" onclick="toggleExplode()">💥 Explode</button>
   </div>
 
@@ -517,6 +530,7 @@
         showToast('📌 View locked — tilt to scrub', '#EF2D5E');
         if (camera) camera.setAttribute('look-controls', 'enabled', false);
         document.getElementById('explodeBtn').style.display = 'none';
+        document.getElementById('homeBtn').style.display = 'none';
         initOrbitFromCamera();
         updateOrbitCamera();
         document.getElementById('orbit-controls').classList.add('visible');
@@ -528,6 +542,7 @@
         showToast('🔓 Unlocked', '#555');
         if (camera) camera.setAttribute('look-controls', 'enabled', true);
         document.getElementById('explodeBtn').style.display = 'block';
+        document.getElementById('homeBtn').style.display = 'block';
         stopOrbit();
         document.getElementById('orbit-controls').classList.remove('visible');
       }
@@ -540,6 +555,7 @@
         const camera = document.querySelector('a-camera');
         if (camera) camera.setAttribute('look-controls', 'enabled', true);
         document.getElementById('explodeBtn').style.display = 'block';
+        document.getElementById('homeBtn').style.display = 'block';
         stopOrbit();
         document.getElementById('orbit-controls').classList.remove('visible');
         socket.emit('unlock-view');
