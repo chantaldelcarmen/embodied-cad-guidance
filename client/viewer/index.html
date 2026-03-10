@@ -713,14 +713,15 @@
     function moveForward(amount) {
       const rig = document.querySelector('#camera-rig');
       if (!rig) return;
-      const pos = rig.getAttribute('position');
-      const rot = rig.getAttribute('rotation');
-      const yaw = THREE.MathUtils.degToRad(rot.y);
-      rig.setAttribute('position', {
-        x: pos.x - Math.sin(yaw) * amount,
-        y: pos.y,
-        z: pos.z - Math.cos(yaw) * amount
-      });
+      const pos = rig.object3D.position;
+      const dx = MODEL_CENTER.x - pos.x;
+      const dy = MODEL_CENTER.y - pos.y;
+      const dz = MODEL_CENTER.z - pos.z;
+      const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      if (dist < 0.01) return;
+      pos.x += (dx / dist) * amount;
+      pos.y += (dy / dist) * amount;
+      pos.z += (dz / dist) * amount;
     }
 
     document.addEventListener('touchstart', (e) => {

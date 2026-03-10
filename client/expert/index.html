@@ -674,9 +674,15 @@
 
     function moveForward(amount) {
       if (!cameraRig) return;
-      const yaw = THREE.MathUtils.degToRad(currentHeading);
-      cameraRig.object3D.position.x -= Math.sin(yaw) * amount;
-      cameraRig.object3D.position.z -= Math.cos(yaw) * amount;
+      const pos = cameraRig.object3D.position;
+      const dx = MODEL_CENTER.x - pos.x;
+      const dy = MODEL_CENTER.y - pos.y;
+      const dz = MODEL_CENTER.z - pos.z;
+      const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      if (dist < 0.01) return;
+      pos.x += (dx / dist) * amount;
+      pos.y += (dy / dist) * amount;
+      pos.z += (dz / dist) * amount;
     }
 
     document.addEventListener('touchstart', (e) => {
@@ -691,6 +697,12 @@
         lastPinchDist = dist;
         moveForward(delta * 0.008);
         if (cameraRig) {
+          // keep orbitRadius in sync so orbit buttons don't snap after zoom
+          if (viewLocked) {
+            const p = cameraRig.object3D.position;
+            const ddx = p.x - MODEL_CENTER.x, ddy = p.y - MODEL_CENTER.y, ddz = p.z - MODEL_CENTER.z;
+            orbitRadius = Math.max(0.5, Math.sqrt(ddx*ddx + ddy*ddy + ddz*ddz));
+          }
           const rigPos = cameraRig.object3D.position;
           if (viewLocked) {
             socket.emit('view-update', { rigX: rigPos.x, rigY: rigPos.y, rigZ: rigPos.z });
