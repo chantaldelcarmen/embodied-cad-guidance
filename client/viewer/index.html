@@ -447,7 +447,7 @@
 
     function initOrbitFromCamera() {
       if (!cameraRig) return;
-      const pos = cameraRig.getAttribute('position');
+      const pos = cameraRig.object3D.position;
       const dx = pos.x - MODEL_CENTER.x;
       const dy = pos.y - MODEL_CENTER.y;
       const dz = pos.z - MODEL_CENTER.z;
@@ -467,7 +467,7 @@
       const z = MODEL_CENTER.z + orbitRadius * Math.cos(phi) * cosTheta;
       cameraRig.setAttribute('position', { x, y, z });
       const dist2d = Math.sqrt((MODEL_CENTER.x - x) ** 2 + (MODEL_CENTER.z - z) ** 2);
-      const yawRad = Math.atan2(MODEL_CENTER.x - x, z - MODEL_CENTER.z);
+      const yawRad = Math.atan2(x - MODEL_CENTER.x, z - MODEL_CENTER.z);
       const pitchRad = Math.atan2(MODEL_CENTER.y - y, dist2d);
       cameraRig.object3D.rotation.order = 'YXZ';
       cameraRig.object3D.rotation.set(pitchRad, yawRad, 0);
