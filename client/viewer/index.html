@@ -590,6 +590,24 @@
     socket.on('explode-view', () => { navigator.vibrate && navigator.vibrate([50, 30, 50, 30, 100]); playExplodeSound(); playAnimation(true); });
     socket.on('assemble-view', () => { navigator.vibrate && navigator.vibrate(80); playAssembleSound(); playAnimation(false); });
 
+    socket.on('scrub-animation', (data) => { scrubAnimation(data.t); });
+
+    function scrubAnimation(normalized) {
+      const engine = document.querySelector('#engine');
+      if (!engine) return;
+      const dur = clipDuration || 2;
+      if (!engine.getAttribute('animation-mixer')) {
+        engine.setAttribute('animation-mixer', 'clip: Take 001; loop: once; clampWhenFinished: true');
+      }
+      const comp = engine.components['animation-mixer'];
+      if (!comp || !comp.mixer) return;
+      comp.mixer._actions.forEach(action => {
+        action.paused = true;
+        action.time = Math.max(0, Math.min(normalized * dur, dur));
+      });
+      comp.mixer.update(0);
+    }
+
     // --- Long press to toggle follow/explore ---
     let longPressTimer = null;
 
