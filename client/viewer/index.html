@@ -500,9 +500,9 @@
         currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor;
         currentRotation.z = 0;
         cameraRig.setAttribute('rotation', currentRotation);
-        if (data.rigX !== undefined) {
-          cameraRig.setAttribute('position', { x: parseFloat(data.rigX), y: parseFloat(data.rigY), z: parseFloat(data.rigZ) });
-        }
+      }
+      if (cameraRig && data.rigX !== undefined) {
+        cameraRig.setAttribute('position', { x: parseFloat(data.rigX), y: parseFloat(data.rigY), z: parseFloat(data.rigZ) });
       }
 
       if (ghostRig) {

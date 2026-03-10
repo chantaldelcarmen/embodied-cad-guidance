@@ -537,7 +537,7 @@
         const delta = dist - lastPinchDist;
         lastPinchDist = dist;
         moveForward(delta * 0.008);
-        if (!viewLocked && cameraRig) {
+        if (cameraRig) {
           const rigPos = cameraRig.getAttribute('position');
           socket.emit('motion-data', {
             alpha: currentHeading.toFixed(1),
