@@ -95,19 +95,16 @@
       text-align: center;
     }
 
-    /* Part highlight buttons — bottom center, above explode */
+    /* Part highlight buttons — left side vertical column */
     #part-controls {
       position: fixed;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 90px);
-      left: 0;
-      right: 0;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
       display: none;
-      justify-content: center;
+      flex-direction: column;
       gap: 8px;
-      padding: 0 16px;
       z-index: 1000;
-      overflow-x: auto;
-      white-space: nowrap;
     }
     #part-controls.visible { display: flex; }
     .part-btn {
@@ -532,6 +529,8 @@
       document.querySelectorAll('.part-btn').forEach(b => b.classList.remove('active'));
     }
 
+    let suppressNextClick = false;
+
     function setupRaycasting() {
       document.querySelectorAll('.clickable').forEach(obj => {
         obj.addEventListener('click', () => highlightObject(obj.id));
@@ -539,9 +538,49 @@
       document.querySelectorAll('.part-btn').forEach(btn => {
         btn.addEventListener('click', () => highlightPart(btn.dataset.part));
       });
+
+      // Touch-to-highlight: tap directly on a part in the scene
+      let tapStart = null;
+      const sceneEl = document.querySelector('#scene');
+      sceneEl.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) { tapStart = null; return; }
+        tapStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }, { passive: true });
+      sceneEl.addEventListener('touchend', (e) => {
+        if (!tapStart || e.changedTouches.length !== 1) return;
+        const dx = Math.abs(e.changedTouches[0].clientX - tapStart.x);
+        const dy = Math.abs(e.changedTouches[0].clientY - tapStart.y);
+        tapStart = null;
+        if (dx > 20 || dy > 20) return; // swipe, not a tap
+
+        const touch = e.changedTouches[0];
+        const canvas = sceneEl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const nx = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+        const ny = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+
+        const cameraObj = document.querySelector('[camera]').getObject3D('camera');
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera({ x: nx, y: ny }, cameraObj);
+
+        const engine = document.querySelector('#engine');
+        if (!engine) return;
+        const meshes = [];
+        engine.object3D.traverse(node => { if (node.isMesh) meshes.push(node); });
+
+        const hits = raycaster.intersectObjects(meshes, false);
+        if (hits.length > 0) {
+          const partKey = Object.keys(PART_GROUPS).find(k => meshMatchesPart(hits[0].object.name, k));
+          if (partKey) {
+            suppressNextClick = true;
+            highlightPart(partKey);
+          }
+        }
+      }, { passive: true });
     }
 
     function highlightObject(objectId) {
+      if (suppressNextClick) { suppressNextClick = false; return; }
       resetAllHighlights();
       if (currentHighlight === objectId) {
         currentHighlight = null;
