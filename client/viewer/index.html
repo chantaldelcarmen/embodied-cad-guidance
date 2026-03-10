@@ -271,6 +271,7 @@
       snapFlash.classList.add('active');
       setTimeout(() => snapFlash.classList.remove('active'), 300);
 
+      navigator.vibrate && navigator.vibrate([80, 50, 80]);
       playSnapSound();
 
       status.textContent = '📌 View locked by expert';
@@ -327,6 +328,7 @@
           highlightEngine();
         }
 
+        navigator.vibrate && navigator.vibrate(100);
         playHighlightSound();
 
         status.textContent = `Highlighting: ${objectId}`;
@@ -361,8 +363,8 @@
       }, 50);
     }
 
-    socket.on('explode-view', () => { console.log('explode-view received'); playAnimation(true); });
-    socket.on('assemble-view', () => { console.log('assemble-view received'); playAnimation(false); });
+    socket.on('explode-view', () => { navigator.vibrate && navigator.vibrate([50, 30, 50, 30, 100]); playAnimation(true); });
+    socket.on('assemble-view', () => { navigator.vibrate && navigator.vibrate(80); playAnimation(false); });
 
     // --- Pinch to zoom (move camera along look direction) ---
     let lastPinchDist = null;
