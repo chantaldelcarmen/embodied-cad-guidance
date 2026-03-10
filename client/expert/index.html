@@ -68,39 +68,50 @@
     }
     #explodeBtn:active { opacity: 0.8; }
 
-    /* Hints overlay — bottom of screen */
-    #hints-overlay {
+    /* Help modal */
+    #help-modal {
       position: fixed;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1001;
+      inset: 0;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
       display: none;
-      flex-direction: column;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
     }
-    #hints-overlay.visible { display: flex; }
-    .hint-pill {
-      background: rgba(0,0,0,0.65);
-      color: white;
-      padding: 8px 14px 8px 18px;
+    #help-modal.visible { display: flex; }
+    #help-card {
+      background: rgba(30,30,30,0.95);
       border-radius: 20px;
-      font-size: 14px;
-      white-space: nowrap;
+      padding: 28px 24px 20px;
+      width: min(320px, calc(100vw - 48px));
       display: flex;
-      align-items: center;
-      gap: 10px;
+      flex-direction: column;
+      gap: 14px;
     }
-    .hint-pill.dismissed { display: none; }
-    .hint-close {
-      background: none;
-      border: none;
-      color: rgba(255,255,255,0.55);
+    #help-card h2 {
+      margin: 0;
+      color: white;
       font-size: 18px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .help-row {
+      color: rgba(255,255,255,0.85);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    #got-it-btn {
+      margin-top: 6px;
+      padding: 14px;
+      background: #4CC3D9;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
       cursor: pointer;
-      padding: 0;
-      line-height: 1;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -213,11 +224,15 @@
   <div id="status">Ready</div>
   <div id="toast"></div>
 
-  <div id="hints-overlay">
-    <div class="hint-pill">👆 Tap engine or part to highlight <button class="hint-close" onclick="dismissHint(this)">×</button></div>
-    <div class="hint-pill">👇 Swipe down to lock / unlock view <button class="hint-close" onclick="dismissHint(this)">×</button></div>
-    <div class="hint-pill">🔒 When locked: tilt to scrub, arrows to orbit <button class="hint-close" onclick="dismissHint(this)">×</button></div>
-    <div class="hint-pill">🤏 Pinch to zoom <button class="hint-close" onclick="dismissHint(this)">×</button></div>
+  <div id="help-modal">
+    <div id="help-card">
+      <h2>How to use</h2>
+      <div class="help-row">👆 Tap the engine or a part button to highlight it</div>
+      <div class="help-row">👇 Swipe down to lock / unlock the view</div>
+      <div class="help-row">🔒 When locked: tilt phone to scrub animation, use arrows to orbit</div>
+      <div class="help-row">🤏 Pinch to zoom</div>
+      <button id="got-it-btn" onclick="hideHelp()">Got it</button>
+    </div>
   </div>
 
   <button id="hints-btn" onclick="showHints()">?</button>
@@ -319,16 +334,11 @@
 
     // --- Hints ---
     function showHints() {
-      const overlay = document.getElementById('hints-overlay');
-      overlay.querySelectorAll('.hint-pill').forEach(p => p.classList.remove('dismissed'));
-      overlay.classList.add('visible');
+      document.getElementById('help-modal').classList.add('visible');
     }
 
-    function dismissHint(closeBtn) {
-      closeBtn.closest('.hint-pill').classList.add('dismissed');
-      const overlay = document.getElementById('hints-overlay');
-      const anyVisible = [...overlay.querySelectorAll('.hint-pill')].some(p => !p.classList.contains('dismissed'));
-      if (!anyVisible) overlay.classList.remove('visible');
+    function hideHelp() {
+      document.getElementById('help-modal').classList.remove('visible');
     }
 
     // --- State ---
