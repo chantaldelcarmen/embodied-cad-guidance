@@ -161,7 +161,7 @@
       bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
       right: 16px;
       display: none;
-      grid-template-areas: ". up ." "left . right" ". down .";
+      grid-template-areas: ". up ." "left center right" ". down .";
       grid-template-columns: 50px 50px 50px;
       grid-template-rows: 50px 50px 50px;
       gap: 4px;
@@ -181,6 +181,7 @@
     #orbit-left  { grid-area: left; }
     #orbit-right { grid-area: right; }
     #orbit-down  { grid-area: down; }
+    #orbit-home  { grid-area: center; font-size: 18px; }
 
     /* Help button — top right */
     #hints-btn {
@@ -253,6 +254,7 @@
   <div id="orbit-controls">
     <button class="orbit-btn" id="orbit-up">▲</button>
     <button class="orbit-btn" id="orbit-left">◄</button>
+    <button class="orbit-btn" id="orbit-home" onclick="resetView()">⌂</button>
     <button class="orbit-btn" id="orbit-right">►</button>
     <button class="orbit-btn" id="orbit-down">▼</button>
   </div>
