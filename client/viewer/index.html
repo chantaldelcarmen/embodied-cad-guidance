@@ -110,6 +110,70 @@
       text-align: center;
     }
 
+    /* iOS fullscreen tip */
+    #ios-tip {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.75);
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      padding: 12px 16px 12px 16px;
+      border-radius: 14px;
+      z-index: 1002;
+      display: none;
+      max-width: 320px;
+      width: calc(100% - 40px);
+      text-align: center;
+      line-height: 1.5;
+    }
+    #ios-tip-close {
+      display: block;
+      margin-top: 8px;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 6px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    /* Orbit D-pad — bottom left, shown when exploring freely */
+    #orbit-controls {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+      left: 16px;
+      display: none;
+      grid-template-areas: ". up ." "left . right" ". down .";
+      grid-template-columns: 50px 50px 50px;
+      grid-template-rows: 50px 50px 50px;
+      gap: 4px;
+      z-index: 1001;
+    }
+    #orbit-controls.visible { display: grid; }
+    .orbit-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      border: none;
+      background: rgba(0,0,0,0.45);
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+    }
+    .orbit-btn:active { background: rgba(76,195,217,0.6); }
+    #orbit-up    { grid-area: up; }
+    #orbit-left  { grid-area: left; }
+    #orbit-right { grid-area: right; }
+    #orbit-down  { grid-area: down; }
+
+
     /* Snap flash overlay */
     #snap-flash {
       position: fixed;
@@ -151,10 +215,19 @@
   <div id="hints-overlay">
     <div class="hint-pill">🤏 Pinch to zoom</div>
     <div class="hint-pill">👆 Hold to toggle: follow / explore freely</div>
+    <div class="hint-pill">◄ ▲ ▼ ► Orbit around model when exploring</div>
   </div>
 
   <button id="hints-btn" onclick="showHints()">?</button>
   <button id="fullscreen-btn" onclick="toggleFullscreen()">⛶</button>
+
+  <!-- Orbit D-pad -->
+  <div id="orbit-controls">
+    <button class="orbit-btn" id="orbit-up">▲</button>
+    <button class="orbit-btn" id="orbit-left">◄</button>
+    <button class="orbit-btn" id="orbit-right">►</button>
+    <button class="orbit-btn" id="orbit-down">▼</button>
+  </div>
 
   <!-- A-Frame Scene -->
   <a-scene>
@@ -242,9 +315,14 @@
       if (followExpert) {
         setStatus('Following expert', 'connected');
         showToast('👁 Following expert', '#4CC3D9');
+        document.getElementById('orbit-controls').classList.remove('visible');
+        stopOrbit();
       } else {
         setStatus('Exploring freely', 'exploring');
         showToast('🔓 Exploring freely', '#888');
+        initOrbitFromCamera();
+        updateOrbitCamera();
+        document.getElementById('orbit-controls').classList.add('visible');
       }
     }
 
@@ -258,8 +336,13 @@
       document.getElementById('enter-overlay').style.display = 'none';
       document.getElementById('fullscreen-btn').style.display = 'block';
       document.getElementById('hints-btn').style.display = 'block';
-      const camera = document.querySelector('a-camera');
-      if (camera) camera.setAttribute('look-controls', 'enabled', true);
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isStandalone = window.navigator.standalone === true;
+      if (isIOS && !isStandalone) {
+        const tip = document.getElementById('ios-tip');
+        tip.style.display = 'block';
+        setTimeout(() => { tip.style.display = 'none'; }, 10000);
+      }
       showHints();
     }
 
@@ -334,6 +417,70 @@
     let currentRotation = { x: 0, y: 0, z: 0 };
     const smoothingFactor = 0.8;
 
+    // --- Orbit controls ---
+    const MODEL_CENTER = { x: -0.010, y: 1.550, z: -3 };
+    let orbitAngle = 0;
+    let orbitElevation = 15;
+    let orbitRadius = 3;
+    let orbitRaf = null;
+
+    function initOrbitFromCamera() {
+      if (!cameraRig) return;
+      const pos = cameraRig.getAttribute('position');
+      const dx = pos.x - MODEL_CENTER.x;
+      const dy = pos.y - MODEL_CENTER.y;
+      const dz = pos.z - MODEL_CENTER.z;
+      orbitRadius = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      if (orbitRadius < 0.5) orbitRadius = 3;
+      orbitAngle = THREE.MathUtils.radToDeg(Math.atan2(dx, dz));
+      orbitElevation = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, dy / orbitRadius))));
+    }
+
+    function updateOrbitCamera() {
+      if (!cameraRig || followExpert) return;
+      const phi = THREE.MathUtils.degToRad(orbitAngle);
+      const theta = THREE.MathUtils.degToRad(orbitElevation);
+      const cosTheta = Math.cos(theta);
+      const x = MODEL_CENTER.x + orbitRadius * Math.sin(phi) * cosTheta;
+      const y = MODEL_CENTER.y + orbitRadius * Math.sin(theta);
+      const z = MODEL_CENTER.z + orbitRadius * Math.cos(phi) * cosTheta;
+      cameraRig.setAttribute('position', { x, y, z });
+      const dist2d = Math.sqrt((MODEL_CENTER.x - x) ** 2 + (MODEL_CENTER.z - z) ** 2);
+      const yaw = THREE.MathUtils.radToDeg(Math.atan2(MODEL_CENTER.x - x, MODEL_CENTER.z - z));
+      const pitch = THREE.MathUtils.radToDeg(Math.atan2(MODEL_CENTER.y - y, dist2d));
+      cameraRig.setAttribute('rotation', { x: pitch, y: yaw, z: 0 });
+      currentRotation = { x: pitch, y: yaw, z: 0 };
+    }
+
+    function startOrbit(direction) {
+      stopOrbit();
+      const step = () => {
+        switch (direction) {
+          case 'left':  orbitAngle -= 1.5; break;
+          case 'right': orbitAngle += 1.5; break;
+          case 'up':    orbitElevation = Math.min(orbitElevation + 1.5, 80); break;
+          case 'down':  orbitElevation = Math.max(orbitElevation - 1.5, -20); break;
+        }
+        updateOrbitCamera();
+        orbitRaf = requestAnimationFrame(step);
+      };
+      orbitRaf = requestAnimationFrame(step);
+    }
+
+    function stopOrbit() {
+      if (orbitRaf) { cancelAnimationFrame(orbitRaf); orbitRaf = null; }
+    }
+
+    ['left', 'right', 'up', 'down'].forEach(dir => {
+      const btn = document.getElementById('orbit-' + dir);
+      btn.addEventListener('touchstart', (e) => { e.stopPropagation(); startOrbit(dir); }, { passive: true });
+      btn.addEventListener('touchend',   (e) => { e.stopPropagation(); stopOrbit(); }, { passive: true });
+      btn.addEventListener('touchcancel', stopOrbit, { passive: true });
+      btn.addEventListener('mousedown', () => startOrbit(dir));
+      btn.addEventListener('mouseup', stopOrbit);
+      btn.addEventListener('mouseleave', stopOrbit);
+    });
+
     socket.on('motion-data', (data) => {
       if (!viewLocked) {
         setStatus(followExpert ? 'Following expert' : 'Exploring freely', followExpert ? 'connected' : 'exploring');
@@ -366,6 +513,8 @@
         cameraRig.setAttribute('position', { x: data.rigX, y: data.rigY, z: data.rigZ });
       }
       if (!followExpert) followExpert = true;
+      document.getElementById('orbit-controls').classList.remove('visible');
+      stopOrbit();
       snapFlash.classList.add('active');
       setTimeout(() => snapFlash.classList.remove('active'), 300);
       navigator.vibrate && navigator.vibrate([80, 50, 80]);
@@ -437,6 +586,7 @@
     let longPressTimer = null;
 
     document.addEventListener('touchstart', (e) => {
+      if (e.target.closest('#orbit-controls')) return;
       if (e.touches.length === 1) {
         longPressTimer = setTimeout(() => {
           toggleFollow();
@@ -493,7 +643,12 @@
         const dist = getPinchDist(e.touches);
         const delta = dist - lastPinchDist;
         lastPinchDist = dist;
-        moveForward(delta * 0.008);
+        if (!followExpert) {
+          orbitRadius = Math.max(0.5, orbitRadius - delta * 0.01);
+          updateOrbitCamera();
+        } else {
+          moveForward(delta * 0.008);
+        }
       }
     }, { passive: false });
 
