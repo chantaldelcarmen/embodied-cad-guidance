@@ -2,131 +2,131 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Expert - Motion Capture</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Expert</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: Arial, sans-serif;
-    }
-    #ui-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      z-index: 1000;
-      pointer-events: none;
-    }
-    #ui-overlay > * {
-      pointer-events: auto;
-    }
-    button {
-      width: calc(100% - 40px);
-      max-width: 500px;
-      padding: 15px;
-      margin: 10px 20px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    #startBtn {
-      background: #4CC3D9;
-      color: white;
-    }
-    #startBtn:disabled {
-      background: #BBB;
-    }
-    .highlight-btn {
-      background: rgba(238, 238, 238, 0.9);
-      color: #333;
-      padding: 10px;
-      font-size: 14px;
-      margin: 5px 20px;
-    }
-    .highlight-btn:active {
-      background: #FFC65D;
-    }
-    #lockViewBtn {
-      background: #EF2D5E;
-      color: white;
-      font-size: 16px;
-      margin: 5px 20px;
-    }
-    #lockViewBtn:active {
-      background: #c0234e;
-    }
+    body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+    a-scene { width: 100vw; height: 100vh; }
+
+    /* Status pill — top center */
     #status {
-      margin: 10px 20px;
-      padding: 10px 15px;
-      background: rgba(240, 240, 240, 0.9);
-      border-radius: 8px;
-      font-weight: bold;
-      font-size: 14px;
-    }
-    #data {
-      margin: 5px 20px;
-      padding: 5px 15px;
-      font-family: monospace;
-      font-size: 12px;
-      background: rgba(255, 255, 255, 0.8);
-      border-radius: 4px;
-    }
-    .controls {
-      margin-top: 10px;
-    }
-    .controls h2 {
-      font-size: 16px;
-      margin: 10px 20px;
-      color: white;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-    }
-    #tap-hint {
       position: fixed;
-      bottom: 20px;
+      top: calc(env(safe-area-inset-top, 0px) + 12px);
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(76, 195, 217, 0.9);
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 14px;
+      color: white;
+      background: #555;
+      z-index: 1000;
+      pointer-events: none;
+      transition: background 0.3s;
+      white-space: nowrap;
+    }
+
+    /* Toast — transient feedback */
+    #toast {
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + 56px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 22px;
+      border-radius: 20px;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      z-index: 1001;
+      opacity: 0;
+      transition: opacity 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* Explode button — bottom center floating */
+    #bottom-controls {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: none;
+    }
+    #explodeBtn {
+      padding: 14px 32px;
+      background: #FF8C00;
+      color: white;
+      border: none;
+      border-radius: 30px;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+      -webkit-tap-highlight-color: transparent;
+    }
+    #explodeBtn:active { opacity: 0.8; }
+
+    /* Hints overlay — center screen */
+    #hints-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1001;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 1s;
+    }
+    #hints-overlay.visible { display: flex; }
+    #hints-overlay.fading { opacity: 0; }
+    .hint-pill {
+      background: rgba(0,0,0,0.65);
       color: white;
       padding: 10px 20px;
       border-radius: 20px;
       font-size: 14px;
-      pointer-events: none;
+      white-space: nowrap;
+      text-align: center;
     }
-    a-scene {
-      width: 100vw;
-      height: 100vh;
+
+    /* Help button — top right */
+    #hints-btn {
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + 8px);
+      right: 12px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.4);
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      z-index: 1001;
+      display: none;
+      -webkit-tap-highlight-color: transparent;
     }
   </style>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 </head>
 <body>
-  <!-- A-Frame 3D Scene -->
   <a-scene id="scene" vr-mode-ui="enabled: false">
     <a-sky color="#87CEEB"></a-sky>
     <a-light type="ambient" intensity="0.5"></a-light>
     <a-light type="directional" position="-1 1 1" intensity="0.7"></a-light>
 
-    <!-- Camera rig for rotation control -->
     <a-entity id="camera-rig" position="0 1.6 0">
       <a-camera position="0 0 0">
-        <!-- Cursor for raycasting on mobile -->
-        <a-cursor 
-          raycaster="objects: .clickable"
-          fuse="false"
-          color="white"
-          opacity="0.5">
-        </a-cursor>
+        <a-cursor raycaster="objects: .clickable" fuse="false" color="white" opacity="0.5"></a-cursor>
       </a-camera>
     </a-entity>
 
-    <!-- Ground plane -->
     <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" color="#7BC8A4"></a-plane>
-
-    <!-- Interactive objects matching viewer -->
     <a-entity id="engine" gltf-model="url(/assets/engine.glb)" position="-0.010 1.550 -3" scale="0.010 0.010 0.010" rotation="0 0 0" class="clickable"></a-entity>
   </a-scene>
 
@@ -135,35 +135,39 @@
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.7); display: flex; align-items: center;
     justify-content: center; z-index: 2000;">
-    <button id="startBtn" style="
-      padding: 20px 40px; font-size: 24px; background: #4CC3D9;
-      color: white; border: none; border-radius: 12px; cursor: pointer;">
-      Start Motion Capture
-    </button>
+    <div style="text-align: center;">
+      <div style="color: white; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px;">Expert</div>
+      <div style="color: white; font-size: 20px; font-weight: bold; margin-bottom: 6px;">Motion Controller</div>
+      <div style="color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 28px;">Point your phone to guide the viewer</div>
+      <button id="startBtn" style="
+        padding: 20px 40px; font-size: 24px; background: #4CC3D9;
+        color: white; border: none; border-radius: 12px; cursor: pointer;">
+        Start
+      </button>
+    </div>
   </div>
 
-  <!-- UI Overlay -->
-  <div id="ui-overlay">
-    <div id="status">Ready</div>
-    <div id="data" style="display:none;"></div>
-    
-    <div class="controls" id="controls" style="display: none;">
-      <!-- Lock View button -->
-      <button id="lockViewBtn" onclick="lockView()">📌 Lock This View for Novice</button>
-      <!-- Explode/Assemble button -->
-      <button id="explodeBtn" onclick="toggleExplode()" style="margin-top: 8px; width: 100%; padding: 10px; background: #FF8C00; color: white; border: none; border-radius: 6px; font-family: monospace; font-size: 13px; cursor: pointer;">💥 Explode Assembly</button>
-    </div>
+  <div id="status">Ready</div>
+  <div id="toast"></div>
 
-    <div id="tap-hint" style="display: none;">👆 Tap objects to highlight | 📌 Lock view to teach</div>
+  <div id="hints-overlay">
+    <div class="hint-pill">👆 Tap engine to highlight</div>
+    <div class="hint-pill">👆👆 Double-tap to lock / unlock view</div>
+    <div class="hint-pill">🤏 Pinch to zoom</div>
+  </div>
+
+  <button id="hints-btn" onclick="showHints()">?</button>
+
+  <div id="bottom-controls">
+    <button id="explodeBtn" onclick="toggleExplode()">💥 Explode</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const THREE = AFRAME.THREE;
-    const startBtn = document.getElementById('startBtn');
 
-    // --- Web Audio ---
+    // --- Audio ---
     let audioCtx = null;
     function getAudioCtx() {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -171,8 +175,7 @@
     }
     function playHighlightSound() {
       const ctx = getAudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'sine';
       osc.frequency.setValueAtTime(880, ctx.currentTime);
@@ -183,8 +186,7 @@
     }
     function playExplodeSound() {
       const ctx = getAudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(400, ctx.currentTime);
@@ -195,8 +197,7 @@
     }
     function playAssembleSound() {
       const ctx = getAudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'sine';
       osc.frequency.setValueAtTime(200, ctx.currentTime);
@@ -207,8 +208,7 @@
     }
     function playSnapSound() {
       const ctx = getAudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'sine';
       osc.frequency.setValueAtTime(300, ctx.currentTime);
@@ -217,62 +217,93 @@
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
       osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.25);
     }
-    const status = document.getElementById('status');
-    const dataDiv = document.getElementById('data');
-    const tapHint = document.getElementById('tap-hint');
-    let scene = null;
-    let cameraRig = null;
 
+    // --- UI helpers ---
+    const statusEl = document.getElementById('status');
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+
+    function setStatus(message, type = 'default') {
+      const colors = { default: '#555', streaming: '#4CC3D9', locked: '#EF2D5E', warning: '#FF8C00' };
+      statusEl.textContent = message;
+      statusEl.style.background = colors[type] || colors.default;
+    }
+
+    function showToast(message, color = '#333', duration = 2000) {
+      toastEl.textContent = message;
+      toastEl.style.background = color;
+      toastEl.style.opacity = '1';
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toastEl.style.opacity = '0'; }, duration);
+    }
+
+    // --- Hints ---
+    let hintsTimeout = null;
+    function showHints() {
+      const overlay = document.getElementById('hints-overlay');
+      overlay.classList.add('visible');
+      overlay.classList.remove('fading');
+      if (hintsTimeout) clearTimeout(hintsTimeout);
+      hintsTimeout = setTimeout(() => {
+        overlay.classList.add('fading');
+        setTimeout(() => overlay.classList.remove('visible'), 1000);
+      }, 4000);
+    }
+
+    // --- State ---
+    let cameraRig = null;
     let currentHeading = 0;
     let currentTilt = 0;
     let viewLocked = false;
+    let clipDuration = null;
 
     document.addEventListener('DOMContentLoaded', () => {
-      scene = document.querySelector('a-scene');
-      if (scene.hasLoaded) {
-        cameraRig = document.getElementById('camera-rig');
-      } else {
-        scene.addEventListener('loaded', () => {
-          cameraRig = document.getElementById('camera-rig');
-        });
-      }
+      const scene = document.querySelector('a-scene');
+      const init = () => { cameraRig = document.getElementById('camera-rig'); };
+      if (scene.hasLoaded) init(); else scene.addEventListener('loaded', init);
+
+      const engine = document.querySelector('#engine');
+      engine.addEventListener('model-loaded', () => {
+        const clips = engine.object3D.animations;
+        if (clips && clips.length > 0) clipDuration = clips[0].duration;
+      });
     });
 
-    startBtn.addEventListener('click', async () => {
+    // --- Start ---
+    document.getElementById('startBtn').addEventListener('click', async () => {
       getAudioCtx();
       try {
         if (typeof DeviceOrientationEvent.requestPermission === 'function') {
           const op = await DeviceOrientationEvent.requestPermission();
-          if (op !== 'granted') { status.textContent = 'Permission denied'; return; }
+          if (op !== 'granted') { setStatus('Permission denied', 'warning'); return; }
         }
         if (typeof DeviceMotionEvent.requestPermission === 'function') {
           const mp = await DeviceMotionEvent.requestPermission();
-          if (mp !== 'granted') { status.textContent = 'Permission denied'; return; }
+          if (mp !== 'granted') { setStatus('Permission denied', 'warning'); return; }
         }
         startListening();
-      } catch (error) {
-        status.textContent = 'Error: ' + error.message;
+      } catch (err) {
+        setStatus('Error: ' + err.message, 'warning');
       }
     });
 
     function startListening() {
       document.getElementById('start-overlay').style.display = 'none';
-      document.getElementById('controls').style.display = 'block';
-      tapHint.style.display = 'block';
+      document.getElementById('bottom-controls').style.display = 'block';
+      document.getElementById('hints-btn').style.display = 'block';
+      setStatus('Streaming', 'streaming');
+      showHints();
 
       let lastUpdate = 0;
       const throttleDelay = 50;
-
       let currentRotation = { x: 0, y: 0, z: 0 };
       const smoothingFactor = 0.3;
-
       let headingDeg = null;
       let lastMotionTime = null;
       let magHeading = null;
       let initialAlpha = null;
       const MAG_CORRECTION = 0.02;
       const MAG_FREEZE_THRESHOLD = 8;
-
       let currentBeta = 0;
       let initialBeta = null;
 
@@ -280,13 +311,11 @@
         if (initialBeta === null && event.beta !== null) {
           initialBeta = event.beta;
           initialAlpha = event.alpha || 0;
-          status.textContent = 'Streaming motion data...';
         }
         if (initialBeta !== null) {
           currentBeta = (event.beta || 0) - initialBeta;
           if (currentBeta > 80) currentBeta = 80;
           if (currentBeta < -80) currentBeta = -80;
-
           let rawMag = (event.alpha || 0) - initialAlpha;
           if (rawMag > 180) rawMag -= 360;
           if (rawMag < -180) rawMag += 360;
@@ -298,12 +327,10 @@
         const now = Date.now();
         if (lastMotionTime !== null && event.rotationRate) {
           const dt = (now - lastMotionTime) / 1000;
-
           if (headingDeg === null) headingDeg = magHeading || 0;
           headingDeg -= event.rotationRate.gamma * dt;
           if (headingDeg > 180) headingDeg -= 360;
           if (headingDeg < -180) headingDeg += 360;
-
           if (magHeading !== null && currentBeta <= MAG_FREEZE_THRESHOLD) {
             let magDelta = magHeading - headingDeg;
             if (magDelta > 180) magDelta -= 360;
@@ -312,7 +339,6 @@
           }
         }
         lastMotionTime = now;
-
         currentHeading = headingDeg || 0;
         currentTilt = currentBeta;
 
@@ -321,18 +347,14 @@
         lastUpdate = now;
 
         const rigPos = cameraRig ? cameraRig.getAttribute('position') : { x: 0, y: 1.6, z: 0 };
-        const data = {
+        socket.emit('motion-data', {
           alpha: headingDeg.toFixed(1),
           beta: currentBeta.toFixed(1),
           gamma: '0',
           rigX: rigPos.x.toFixed(3),
           rigY: rigPos.y.toFixed(3),
           rigZ: rigPos.z.toFixed(3)
-        };
-
-        socket.emit('motion-data', data);
-        dataDiv.style.display = 'block';
-        dataDiv.textContent = 'heading: ' + data.alpha + 'deg  tilt: ' + data.beta + 'deg';
+        });
 
         if (cameraRig) {
           const targetRotation = { x: currentBeta, y: headingDeg, z: 0 };
@@ -344,42 +366,95 @@
       });
 
       setupRaycasting();
+      setupDoubleTap();
     }
 
-    // Send snap-to-view event with current rotation
+    // --- Double-tap anywhere to lock/unlock ---
+    function setupDoubleTap() {
+      let lastTapTime = 0;
+      let pinching = false;
+
+      document.addEventListener('touchstart', (e) => {
+        if (e.touches.length >= 2) pinching = true;
+      }, { passive: true });
+
+      document.addEventListener('touchend', (e) => {
+        if (pinching) {
+          if (e.touches.length === 0) { pinching = false; lastTapTime = 0; }
+          return;
+        }
+        if (e.changedTouches.length !== 1 || e.touches.length > 0) return;
+        const now = Date.now();
+        if (now - lastTapTime < 300) {
+          lockView();
+          lastTapTime = 0;
+        } else {
+          lastTapTime = now;
+        }
+      }, { passive: true });
+    }
+
     function lockView() {
       viewLocked = !viewLocked;
-      const btn = document.getElementById('lockViewBtn');
       const camera = document.querySelector('a-camera');
       if (viewLocked) {
-          const rigPos = cameraRig ? cameraRig.getAttribute('position') : { x: 0, y: 1.6, z: 0 };
-        const snapData = { x: currentTilt, y: currentHeading, z: 0, rigX: rigPos.x, rigY: rigPos.y, rigZ: rigPos.z };
-        socket.emit('snap-view', snapData);
+        const rigPos = cameraRig ? cameraRig.getAttribute('position') : { x: 0, y: 1.6, z: 0 };
+        socket.emit('snap-view', { x: currentTilt, y: currentHeading, z: 0, rigX: rigPos.x, rigY: rigPos.y, rigZ: rigPos.z });
         navigator.vibrate && navigator.vibrate([80, 50, 80]);
         playSnapSound();
-        btn.textContent = '🔓 Unlock View';
-        btn.style.background = '#888';
-        status.textContent = '📌 View locked';
+        setStatus('📌 Locked', 'locked');
+        showToast('📌 View locked', '#EF2D5E');
         if (camera) camera.setAttribute('look-controls', 'enabled', false);
       } else {
         socket.emit('unlock-view');
-        btn.textContent = '📌 Lock This View for Novice';
-        btn.style.background = '#EF2D5E';
-        status.textContent = 'Streaming motion data...';
+        setStatus('Streaming', 'streaming');
+        showToast('🔓 Unlocked', '#555');
         if (camera) camera.setAttribute('look-controls', 'enabled', true);
       }
     }
 
-    let exploded = false;
-    let clipDuration = null;
+    // --- Highlight ---
+    let currentHighlight = null;
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const engine = document.querySelector('#engine');
-      engine.addEventListener('model-loaded', () => {
-        const clips = engine.object3D.animations;
-        if (clips && clips.length > 0) clipDuration = clips[0].duration;
+    function setupRaycasting() {
+      document.querySelectorAll('.clickable').forEach(obj => {
+        obj.addEventListener('click', () => highlightObject(obj.id));
       });
-    });
+    }
+
+    function highlightObject(objectId) {
+      document.querySelectorAll('.clickable').forEach(obj => {
+        obj.object3D.traverse(node => {
+          if (node.isMesh && node.userData.originalColor) node.material.color.copy(node.userData.originalColor);
+        });
+      });
+
+      if (currentHighlight === objectId) {
+        currentHighlight = null;
+        socket.emit('highlight', { object: null });
+        navigator.vibrate && navigator.vibrate(50);
+        showToast('Highlight cleared', '#555', 1500);
+      } else {
+        currentHighlight = objectId;
+        socket.emit('highlight', { object: objectId });
+        navigator.vibrate && navigator.vibrate(100);
+        playHighlightSound();
+        const object = document.querySelector(`#${objectId}`);
+        if (object) {
+          object.object3D.traverse(node => {
+            if (node.isMesh) {
+              if (!node.userData.originalColor) node.userData.originalColor = node.material.color.clone();
+              node.material = node.material.clone();
+              node.material.color.set('#FFFF00');
+            }
+          });
+          showToast(`Highlighted`, '#4CC3D9', 1500);
+        }
+      }
+    }
+
+    // --- Explode ---
+    let exploded = false;
 
     function toggleExplode() {
       exploded = !exploded;
@@ -394,7 +469,7 @@
         socket.emit('assemble-view');
         navigator.vibrate && navigator.vibrate(80);
         playAssembleSound();
-        btn.textContent = '💥 Explode Assembly';
+        btn.textContent = '💥 Explode';
         btn.style.background = '#FF8C00';
       }
       playAnimation(exploded);
@@ -458,59 +533,6 @@
     }, { passive: false });
 
     document.addEventListener('touchend', () => { lastPinchDist = null; });
-
-    function setupRaycasting() {
-      const clickables = document.querySelectorAll('.clickable');
-      clickables.forEach(obj => {
-        obj.addEventListener('click', () => {
-          highlightObject(obj.id);
-        });
-      });
-    }
-
-    let currentHighlight = null;
-
-    function highlightObject(objectId) {
-      // Reset all
-      document.querySelectorAll('.clickable').forEach(obj => {
-        obj.object3D.traverse(node => {
-          if (node.isMesh && node.userData.originalColor) {
-            node.material.color.copy(node.userData.originalColor);
-          }
-        });
-      });
-
-      if (currentHighlight === objectId) {
-        // Toggle off
-        currentHighlight = null;
-        socket.emit('highlight', { object: null });
-        navigator.vibrate && navigator.vibrate(50);
-        status.textContent = 'Highlight cleared';
-      } else {
-        // Highlight new
-        currentHighlight = objectId;
-        socket.emit('highlight', { object: objectId });
-        navigator.vibrate && navigator.vibrate(100);
-        playHighlightSound();
-        const object = document.querySelector(`#${objectId}`);
-        if (object) {
-          object.object3D.traverse(node => {
-            if (node.isMesh) {
-              if (!node.userData.originalColor) {
-                node.userData.originalColor = node.material.color.clone();
-              }
-              node.material = node.material.clone();
-              node.material.color.set('#FFFF00');
-            }
-          });
-          status.textContent = `Highlighted ${objectId}`;
-        }
-      }
-
-      setTimeout(() => {
-        status.textContent = 'Streaming motion data...';
-      }, 1000);
-    }
   </script>
 </body>
 </html>
