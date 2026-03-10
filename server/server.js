@@ -38,10 +38,12 @@ io.on("connection", (socket) => {
   });
 
   socket.on("explode-view", () => {
+    console.log("explode-view received, broadcasting");
     socket.broadcast.emit("explode-view");
   });
 
   socket.on("assemble-view", () => {
+    console.log("assemble-view received, broadcasting");
     socket.broadcast.emit("assemble-view");
   });
 

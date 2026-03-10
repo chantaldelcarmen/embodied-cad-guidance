@@ -160,6 +160,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    const THREE = AFRAME.THREE;
     const startBtn = document.getElementById('startBtn');
     const status = document.getElementById('status');
     const dataDiv = document.getElementById('data');
@@ -307,19 +308,13 @@
     }
 
     let exploded = false;
-    let engineAction = null;
+    let clipDuration = null;
 
     document.addEventListener('DOMContentLoaded', () => {
       const engine = document.querySelector('#engine');
       engine.addEventListener('model-loaded', () => {
-        engine.setAttribute('animation-mixer', 'clip: Take 001; loop: once; clampWhenFinished: true');
-        setTimeout(() => {
-          const mixer = engine.components['animation-mixer'] && engine.components['animation-mixer'].mixer;
-          if (mixer && mixer._actions && mixer._actions[0]) {
-            engineAction = mixer._actions[0];
-            engineAction.stop();
-          }
-        }, 100);
+        const clips = engine.object3D.animations;
+        if (clips && clips.length > 0) clipDuration = clips[0].duration;
       });
     });
 
@@ -339,11 +334,15 @@
     }
 
     function playAnimation(forward) {
-      if (!engineAction) return;
-      engineAction.paused = false;
-      engineAction.timeScale = forward ? 1 : -1;
-      engineAction.time = forward ? 0 : engineAction.getClip().duration;
-      engineAction.play();
+      const engine = document.querySelector('#engine');
+      if (!engine) return;
+      engine.removeAttribute('animation-mixer');
+      if (forward) {
+        engine.setAttribute('animation-mixer', 'clip: Take 001; loop: once; clampWhenFinished: true; timeScale: 1');
+      } else {
+        const dur = clipDuration || 2;
+        engine.setAttribute('animation-mixer', `clip: Take 001; loop: once; clampWhenFinished: true; timeScale: -1; startAt: ${dur}`);
+      }
     }
 
     function setupRaycasting() {
