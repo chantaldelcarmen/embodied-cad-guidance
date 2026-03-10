@@ -300,11 +300,18 @@
 
     socket.on('highlight', (data) => {
       const objectId = data.object;
+
+      resetEngineColor();
+
+      if (!objectId) {
+        status.textContent = 'Highlight cleared';
+        setTimeout(() => { status.textContent = followExpert ? 'Receiving motion data' : 'Exploring freely'; }, 2000);
+        return;
+      }
+
       const object = document.querySelector(`#${objectId}`);
 
       if (object) {
-        resetEngineColor();
-
         if (objectId === 'engine') {
           highlightEngine();
         }
