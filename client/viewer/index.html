@@ -119,15 +119,12 @@
       }
       followExpert = !followExpert;
       const btn = document.getElementById('follow-btn');
-      if (!ghostRig) ghostRig = document.querySelector('#ghost-rig');
       if (followExpert) {
         btn.textContent = '👁 Following Expert';
         btn.style.background = '#4CC3D9';
-        if (ghostRig) ghostRig.setAttribute('visible', false);
       } else {
         btn.textContent = '🔓 Exploring Freely';
         btn.style.background = '#888';
-        if (ghostRig) ghostRig.setAttribute('visible', true);
       }
     }
 
@@ -230,8 +227,9 @@
         cameraRig.setAttribute('rotation', currentRotation);
       }
 
-      // Update ghost rotation when exploring freely
-      if (ghostRig && !followExpert) {
+      // Always update ghost rotation once expert connects
+      if (ghostRig) {
+        ghostRig.setAttribute('visible', true);
         ghostRig.setAttribute('rotation', {
           x: parseFloat(data.beta),
           y: parseFloat(data.alpha),
