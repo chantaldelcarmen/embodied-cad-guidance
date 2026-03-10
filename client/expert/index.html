@@ -152,7 +152,7 @@
 
   <div id="hints-overlay">
     <div class="hint-pill">👆 Tap engine to highlight</div>
-    <div class="hint-pill">👆👆 Double-tap to lock / unlock view</div>
+    <div class="hint-pill">✌️ Two-finger tap to lock / unlock view</div>
     <div class="hint-pill">🤏 Pinch to zoom</div>
   </div>
 
@@ -380,28 +380,19 @@
       setupDoubleTap();
     }
 
-    // --- Double-tap anywhere to lock/unlock ---
+    // --- Two-finger tap to lock/unlock ---
     function setupDoubleTap() {
-      let lastTapTime = 0;
-      let pinching = false;
+      let twoFingerStart = 0;
 
       document.addEventListener('touchstart', (e) => {
-        if (e.touches.length >= 2) pinching = true;
+        if (e.touches.length === 2) twoFingerStart = Date.now();
       }, { passive: true });
 
       document.addEventListener('touchend', (e) => {
-        if (pinching) {
-          if (e.touches.length === 0) { pinching = false; lastTapTime = 0; }
-          return;
-        }
-        if (e.changedTouches.length !== 1 || e.touches.length > 0) return;
-        if (e.target.closest('#bottom-controls')) return;
-        const now = Date.now();
-        if (now - lastTapTime < 300) {
-          lockView();
-          lastTapTime = 0;
-        } else {
-          lastTapTime = now;
+        if (e.touches.length === 0 && twoFingerStart > 0) {
+          const elapsed = Date.now() - twoFingerStart;
+          twoFingerStart = 0;
+          if (elapsed < 300) lockView();
         }
       }, { passive: true });
     }
