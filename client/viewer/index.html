@@ -82,32 +82,51 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* Hints overlay — center screen */
-    #hints-overlay {
+    /* Help modal */
+    #help-modal {
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 1001;
+      inset: 0;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
       display: none;
-      flex-direction: column;
       align-items: center;
-      gap: 10px;
-      pointer-events: none;
-      opacity: 1;
-      transition: opacity 1s;
+      justify-content: center;
     }
-    #hints-overlay.visible { display: flex; }
-    #hints-overlay.fading { opacity: 0; }
-    .hint-pill {
-      background: rgba(0,0,0,0.65);
-      color: white;
-      padding: 10px 20px;
+    #help-modal.visible { display: flex; }
+    #help-card {
+      background: rgba(30,30,30,0.95);
       border-radius: 20px;
-      font-family: Arial, sans-serif;
-      font-size: 14px;
-      white-space: nowrap;
+      padding: 28px 24px 20px;
+      width: min(320px, calc(100vw - 48px));
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    #help-card h2 {
+      margin: 0;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
       text-align: center;
+    }
+    .help-row {
+      color: rgba(255,255,255,0.85);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    #got-it-btn {
+      margin-top: 6px;
+      padding: 14px;
+      background: #4CC3D9;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
     }
 
     /* iOS fullscreen tip */
@@ -212,10 +231,14 @@
   <div id="status">Waiting...</div>
   <div id="toast"></div>
 
-  <div id="hints-overlay">
-    <div class="hint-pill">🤏 Pinch to zoom</div>
-    <div class="hint-pill">👆 Hold to toggle: follow / explore freely</div>
-    <div class="hint-pill">◄ ▲ ▼ ► Orbit around model when exploring</div>
+  <div id="help-modal">
+    <div id="help-card">
+      <h2>How to use</h2>
+      <div class="help-row">🤏 Pinch to zoom</div>
+      <div class="help-row">👆 Hold to toggle: follow expert / explore freely</div>
+      <div class="help-row">◄ ▲ ▼ ► Orbit around model when exploring freely</div>
+      <button id="got-it-btn" onclick="hideHelp()">Got it</button>
+    </div>
   </div>
 
   <button id="hints-btn" onclick="showHints()">?</button>
@@ -281,16 +304,12 @@
     }
 
     // --- Hints ---
-    let hintsTimeout = null;
     function showHints() {
-      const overlay = document.getElementById('hints-overlay');
-      overlay.classList.add('visible');
-      overlay.classList.remove('fading');
-      if (hintsTimeout) clearTimeout(hintsTimeout);
-      hintsTimeout = setTimeout(() => {
-        overlay.classList.add('fading');
-        setTimeout(() => overlay.classList.remove('visible'), 1000);
-      }, 4000);
+      document.getElementById('help-modal').classList.add('visible');
+    }
+
+    function hideHelp() {
+      document.getElementById('help-modal').classList.remove('visible');
     }
 
     // --- Fullscreen ---
