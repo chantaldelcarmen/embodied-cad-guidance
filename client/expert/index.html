@@ -549,7 +549,7 @@
     }
 
     function resetView() {
-      // If locked, unlock viewer first so it will accept the reset motion-data
+      // Unlock expert UI if locked
       if (viewLocked) {
         viewLocked = false;
         const camera = document.querySelector('a-camera');
@@ -558,15 +558,14 @@
         document.getElementById('homeBtn').style.display = 'block';
         stopOrbit();
         document.getElementById('orbit-controls').classList.remove('visible');
-        socket.emit('unlock-view');
       }
       // Reset expert rig to origin
       if (cameraRig) {
         cameraRig.object3D.position.set(0, 1.6, 0);
         cameraRig.setAttribute('rotation', { x: 0, y: 0, z: 0 });
       }
-      // Recalibrate heading and tilt so next motion-data starts from zero
-      headingDeg = null;
+      // Reset motion state — set headingDeg to 0 so emits resume immediately
+      headingDeg = 0;
       initialBeta = null;
       initialAlpha = null;
       magHeading = null;
@@ -575,8 +574,8 @@
       currentRotation = { x: 0, y: 0, z: 0 };
       currentHeading = 0;
       currentTilt = 0;
-      // Sync viewer to origin (viewer now unlocked so it will apply this)
-      socket.emit('motion-data', { alpha: '0', beta: '0', gamma: '0', rigX: '0', rigY: '1.600', rigZ: '0' });
+      // Tell viewer to snap to origin instantly (bypasses smoothing, lock, and followExpert state)
+      socket.emit('reset-view');
       setStatus('Streaming', 'streaming');
       showToast('🏠 View reset', '#555');
     }

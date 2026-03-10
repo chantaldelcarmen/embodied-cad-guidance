@@ -556,6 +556,17 @@
       setStatus('Following expert', 'connected');
     });
 
+    socket.on('reset-view', () => {
+      viewLocked = false;
+      followExpert = true;
+      currentRotation = { x: 0, y: 0, z: 0 };
+      if (cameraRig) {
+        cameraRig.object3D.position.set(0, 1.6, 0);
+        cameraRig.setAttribute('rotation', { x: 0, y: 0, z: 0 });
+      }
+      setStatus('Following expert', 'connected');
+    });
+
     socket.on('connect', () => {
       setStatus('Connected', 'connected');
     });
