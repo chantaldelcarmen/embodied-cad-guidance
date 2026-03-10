@@ -139,9 +139,15 @@
       return audioCtx;
     }
 
-    function enterExperience() {
+    async function enterExperience() {
       const ctx = getAudioCtx();
-      ctx.resume();
+      await ctx.resume();
+      // iOS requires a real buffer to be played during a user gesture to unlock audio
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
       document.getElementById('enter-overlay').style.display = 'none';
       const camera = document.querySelector('a-camera');
       if (camera) camera.setAttribute('look-controls', 'enabled', true);
