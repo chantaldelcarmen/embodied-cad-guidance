@@ -46,11 +46,11 @@
       white-space: nowrap;
     }
 
-    /* Fullscreen button — bottom right */
+    /* Fullscreen button — bottom left */
     #fullscreen-btn {
       position: fixed;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
-      right: 16px;
+      left: 16px;
       width: 44px;
       height: 44px;
       border-radius: 10px;
@@ -142,11 +142,11 @@
       width: 100%;
     }
 
-    /* Orbit D-pad — bottom left */
+    /* Orbit D-pad — bottom right */
     #orbit-controls {
       position: fixed;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
-      left: 16px;
+      right: 16px;
       display: none;
       grid-template-areas: ". up ." "left . right" ". down .";
       grid-template-columns: 50px 50px 50px;
