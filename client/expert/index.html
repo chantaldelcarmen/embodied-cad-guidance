@@ -68,31 +68,40 @@
     }
     #explodeBtn:active { opacity: 0.8; }
 
-    /* Hints overlay — center screen */
+    /* Hints overlay — bottom of screen */
     #hints-overlay {
       position: fixed;
-      top: 50%;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
       left: 50%;
-      transform: translate(-50%, -50%);
+      transform: translateX(-50%);
       z-index: 1001;
       display: none;
       flex-direction: column;
       align-items: center;
       gap: 10px;
-      pointer-events: none;
-      opacity: 1;
-      transition: opacity 1s;
     }
     #hints-overlay.visible { display: flex; }
-    #hints-overlay.fading { opacity: 0; }
     .hint-pill {
       background: rgba(0,0,0,0.65);
       color: white;
-      padding: 10px 20px;
+      padding: 8px 14px 8px 18px;
       border-radius: 20px;
       font-size: 14px;
       white-space: nowrap;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hint-pill.dismissed { display: none; }
+    .hint-close {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.55);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      -webkit-tap-highlight-color: transparent;
     }
 
     /* Part highlight buttons — left side vertical column */
@@ -205,10 +214,10 @@
   <div id="toast"></div>
 
   <div id="hints-overlay">
-    <div class="hint-pill">👆 Tap engine to highlight</div>
-    <div class="hint-pill">👇 Swipe down to lock / unlock view</div>
-    <div class="hint-pill">🔒 When locked: tilt to scrub, arrows to orbit</div>
-    <div class="hint-pill">🤏 Pinch to zoom</div>
+    <div class="hint-pill">👆 Tap engine or part to highlight <button class="hint-close" onclick="dismissHint(this)">×</button></div>
+    <div class="hint-pill">👇 Swipe down to lock / unlock view <button class="hint-close" onclick="dismissHint(this)">×</button></div>
+    <div class="hint-pill">🔒 When locked: tilt to scrub, arrows to orbit <button class="hint-close" onclick="dismissHint(this)">×</button></div>
+    <div class="hint-pill">🤏 Pinch to zoom <button class="hint-close" onclick="dismissHint(this)">×</button></div>
   </div>
 
   <button id="hints-btn" onclick="showHints()">?</button>
@@ -309,16 +318,17 @@
     }
 
     // --- Hints ---
-    let hintsTimeout = null;
     function showHints() {
       const overlay = document.getElementById('hints-overlay');
+      overlay.querySelectorAll('.hint-pill').forEach(p => p.classList.remove('dismissed'));
       overlay.classList.add('visible');
-      overlay.classList.remove('fading');
-      if (hintsTimeout) clearTimeout(hintsTimeout);
-      hintsTimeout = setTimeout(() => {
-        overlay.classList.add('fading');
-        setTimeout(() => overlay.classList.remove('visible'), 1000);
-      }, 4000);
+    }
+
+    function dismissHint(closeBtn) {
+      closeBtn.closest('.hint-pill').classList.add('dismissed');
+      const overlay = document.getElementById('hints-overlay');
+      const anyVisible = [...overlay.querySelectorAll('.hint-pill')].some(p => !p.classList.contains('dismissed'));
+      if (!anyVisible) overlay.classList.remove('visible');
     }
 
     // --- State ---
