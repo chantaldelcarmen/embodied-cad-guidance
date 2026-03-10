@@ -8,34 +8,107 @@
   <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
   <style>
     body { margin: 0; overflow: hidden; }
-    #ui-overlay {
+
+    /* Status pill — top left */
+    #status {
       position: fixed;
-      top: 10px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.7);
+      top: calc(env(safe-area-inset-top, 0px) + 12px);
+      left: 12px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-family: Arial, sans-serif;
+      font-weight: bold;
+      font-size: 14px;
       color: white;
-      padding: 15px;
-      border-radius: 8px;
-      font-family: monospace;
+      background: #555;
       z-index: 1000;
-      min-width: 180px;
+      pointer-events: none;
+      transition: background 0.3s;
+      white-space: nowrap;
     }
-    #status { font-weight: bold; margin-bottom: 10px; }
-    #data { font-size: 14px; }
-    #follow-btn {
-      margin-top: 10px;
-      padding: 8px 12px;
-      background: #4CC3D9;
+
+    /* Toast — transient feedback */
+    #toast {
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + 56px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 22px;
+      border-radius: 20px;
       color: white;
-      border: none;
-      border-radius: 6px;
-      font-family: monospace;
-      font-size: 13px;
-      cursor: pointer;
-      width: 100%;
-      transition: background 0.2s;
+      font-family: Arial, sans-serif;
+      font-size: 15px;
+      font-weight: bold;
+      z-index: 1001;
+      opacity: 0;
+      transition: opacity 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
     }
-    #follow-btn:hover { opacity: 0.85; }
+
+    /* Fullscreen button — bottom right */
+    #fullscreen-btn {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+      right: 16px;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      border: none;
+      background: rgba(0,0,0,0.45);
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 1001;
+      display: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Help button — top right */
+    #hints-btn {
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + 8px);
+      right: 12px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.4);
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      z-index: 1001;
+      display: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Hints overlay — center screen */
+    #hints-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1001;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 1s;
+    }
+    #hints-overlay.visible { display: flex; }
+    #hints-overlay.fading { opacity: 0; }
+    .hint-pill {
+      background: rgba(0,0,0,0.65);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      white-space: nowrap;
+      text-align: center;
+    }
 
     /* Snap flash overlay */
     #snap-flash {
@@ -53,7 +126,6 @@
 </head>
 <body>
 
-  <!-- Flash overlay for snap-to-view feedback -->
   <div id="snap-flash"></div>
 
   <!-- Enter overlay -->
@@ -68,12 +140,16 @@
     </button>
   </div>
 
-  <!-- UI Overlay -->
-  <div id="ui-overlay">
-    <div id="status">Waiting for motion data...</div>
-    <div id="data"></div>
-    <button id="follow-btn" onclick="toggleFollow()">👁 Following Expert</button>
+  <div id="status">Waiting...</div>
+  <div id="toast"></div>
+
+  <div id="hints-overlay">
+    <div class="hint-pill">🤏 Pinch to zoom</div>
+    <div class="hint-pill">👆 Hold to toggle: follow / explore freely</div>
   </div>
+
+  <button id="hints-btn" onclick="showHints()">?</button>
+  <button id="fullscreen-btn" onclick="toggleFullscreen()">⛶</button>
 
   <!-- A-Frame Scene -->
   <a-scene>
@@ -88,88 +164,120 @@
       <a-camera id="camera" position="0 0 0" look-controls="enabled: false"></a-camera>
     </a-entity>
 
-    <!-- Ghost: shows expert's gaze direction when viewer is exploring freely -->
+    <!-- Ghost arrow: shows expert's gaze when viewer is exploring freely -->
     <a-entity id="ghost-rig" position="0 3 -1" visible="false">
       <a-sphere color="#4CC3D9" radius="0.08" opacity="0.9"></a-sphere>
       <a-cylinder color="#4CC3D9" opacity="0.7" radius="0.03" height="2" position="0 0 -1" rotation="90 0 0"></a-cylinder>
       <a-cone color="#4CC3D9" opacity="0.9" radius-bottom="0.08" radius-top="0" height="0.2" position="0 0 -2" rotation="90 0 0"></a-cone>
       <a-text value="Expert" align="center" position="0 0.2 0" scale="0.5 0.5 0.5" color="white"></a-text>
     </a-entity>
-
   </a-scene>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const THREE = AFRAME.THREE;
-    const status = document.getElementById('status');
-    const dataDiv = document.getElementById('data');
+    const statusEl = document.getElementById('status');
+    const toastEl = document.getElementById('toast');
     const snapFlash = document.getElementById('snap-flash');
     let cameraRig = null;
     let ghostRig = null;
-
-    // --- Follow toggle ---
     let followExpert = true;
+    let viewLocked = false;
 
+    // --- UI helpers ---
+    let toastTimer = null;
+
+    function setStatus(message, type = 'default') {
+      const colors = { default: '#555', connected: '#4CC3D9', locked: '#EF2D5E', exploring: '#888' };
+      statusEl.textContent = message;
+      statusEl.style.background = colors[type] || colors.default;
+    }
+
+    function showToast(message, color = '#333', duration = 2000) {
+      toastEl.textContent = message;
+      toastEl.style.background = color;
+      toastEl.style.opacity = '1';
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toastEl.style.opacity = '0'; }, duration);
+    }
+
+    // --- Hints ---
+    let hintsTimeout = null;
+    function showHints() {
+      const overlay = document.getElementById('hints-overlay');
+      overlay.classList.add('visible');
+      overlay.classList.remove('fading');
+      if (hintsTimeout) clearTimeout(hintsTimeout);
+      hintsTimeout = setTimeout(() => {
+        overlay.classList.add('fading');
+        setTimeout(() => overlay.classList.remove('visible'), 1000);
+      }, 4000);
+    }
+
+    // --- Fullscreen ---
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+    document.addEventListener('fullscreenchange', () => {
+      document.getElementById('fullscreen-btn').textContent = document.fullscreenElement ? '⤡' : '⛶';
+    });
+
+    // --- Follow toggle (long press) ---
     function toggleFollow() {
       if (viewLocked) {
-        status.textContent = 'View locked by expert — cannot explore freely';
-        setTimeout(() => { status.textContent = '📌 View locked by expert'; }, 2000);
+        showToast('View locked by expert', '#EF2D5E', 2000);
         return;
       }
       followExpert = !followExpert;
-      const btn = document.getElementById('follow-btn');
       if (followExpert) {
-        btn.textContent = '👁 Following Expert';
-        btn.style.background = '#4CC3D9';
+        setStatus('Following expert', 'connected');
+        showToast('👁 Following expert', '#4CC3D9');
       } else {
-        btn.textContent = '🔓 Exploring Freely';
-        btn.style.background = '#888';
+        setStatus('Exploring freely', 'exploring');
+        showToast('🔓 Exploring freely', '#888');
       }
     }
 
-    // --- Web Audio API setup ---
-    // AudioContext created lazily on first sound (browser autoplay policy)
-    let audioCtx = null;
-
-    function getAudioCtx() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      return audioCtx;
-    }
-
-    function enterExperience() {
-      getAudioCtx();
+    // --- Enter experience ---
+    async function enterExperience() {
+      const ctx = getAudioCtx();
+      await ctx.resume();
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf; src.connect(ctx.destination); src.start(0);
       document.getElementById('enter-overlay').style.display = 'none';
+      document.getElementById('fullscreen-btn').style.display = 'block';
+      document.getElementById('hints-btn').style.display = 'block';
       const camera = document.querySelector('a-camera');
       if (camera) camera.setAttribute('look-controls', 'enabled', true);
+      showHints();
     }
 
-    // Short soft beep for highlight
+    // --- Audio ---
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      return audioCtx;
+    }
     function playHighlightSound() {
       const ctx = getAudioCtx();
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(880, ctx.currentTime);       // A5 note
-      oscillator.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15); // drop to A4
-
-      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.3);
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
     }
-
     function playExplodeSound() {
       const ctx = getAudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(400, ctx.currentTime);
@@ -180,8 +288,7 @@
     }
     function playAssembleSound() {
       const ctx = getAudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
       osc.connect(gain); gain.connect(ctx.destination);
       osc.type = 'sine';
       osc.frequency.setValueAtTime(200, ctx.currentTime);
@@ -190,40 +297,32 @@
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
       osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
     }
-
-    // Distinct "snap" sound for lock view
     function playSnapSound() {
       const ctx = getAudioCtx();
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(300, ctx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.1); // quick rise
-
-      gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.25);
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.25);
     }
 
     // --- A-Frame load ---
     document.addEventListener('DOMContentLoaded', () => {
       const scene = document.querySelector('a-scene');
-      if (scene.hasLoaded) {
+      const init = () => {
         cameraRig = document.querySelector('#camera-rig');
         ghostRig = document.querySelector('#ghost-rig');
-      } else {
-        scene.addEventListener('loaded', () => {
-          cameraRig = document.querySelector('#camera-rig');
-          ghostRig = document.querySelector('#ghost-rig');
-        });
-      }
+      };
+      if (scene.hasLoaded) init(); else scene.addEventListener('loaded', init);
 
+      const engine = document.querySelector('#engine');
+      engine.addEventListener('model-loaded', () => {
+        const clips = engine.object3D.animations;
+        if (clips && clips.length > 0) clipDuration = clips[0].duration;
+      });
     });
 
     // --- Camera smoothing ---
@@ -231,94 +330,58 @@
     const smoothingFactor = 0.8;
 
     socket.on('motion-data', (data) => {
-      status.textContent = followExpert ? 'Receiving motion data' : 'Exploring freely';
-      dataDiv.innerHTML = `
-        Alpha: ${data.alpha}°<br>
-        Beta: ${data.beta}°<br>
-        Gamma: ${data.gamma}°
-      `;
+      if (!viewLocked) {
+        setStatus(followExpert ? 'Following expert' : 'Exploring freely', followExpert ? 'connected' : 'exploring');
+      }
 
       if (cameraRig && followExpert && !viewLocked) {
-        const targetRotation = {
-          x: parseFloat(data.beta),
-          y: parseFloat(data.alpha),
-          z: 0
-        };
-
+        const targetRotation = { x: parseFloat(data.beta), y: parseFloat(data.alpha), z: 0 };
         currentRotation.x += (targetRotation.x - currentRotation.x) * smoothingFactor;
         currentRotation.y += (targetRotation.y - currentRotation.y) * smoothingFactor;
         currentRotation.z = 0;
-
         cameraRig.setAttribute('rotation', currentRotation);
-
         if (data.rigX !== undefined) {
-          cameraRig.setAttribute('position', {
-            x: parseFloat(data.rigX),
-            y: parseFloat(data.rigY),
-            z: parseFloat(data.rigZ)
-          });
+          cameraRig.setAttribute('position', { x: parseFloat(data.rigX), y: parseFloat(data.rigY), z: parseFloat(data.rigZ) });
         }
       }
 
-      // Always update ghost rotation once expert connects
       if (ghostRig) {
         ghostRig.setAttribute('visible', true);
-        ghostRig.setAttribute('rotation', {
-          x: parseFloat(data.beta),
-          y: parseFloat(data.alpha),
-          z: 0
-        });
+        ghostRig.setAttribute('rotation', { x: parseFloat(data.beta), y: parseFloat(data.alpha), z: 0 });
       }
     });
 
-    // --- Snap-to-view / lock ---
-    let viewLocked = false;
-
     socket.on('snap-view', (data) => {
       if (!cameraRig) return;
-
       viewLocked = true;
-
       const snapRotation = { x: data.x, y: data.y, z: 0 };
       currentRotation = { ...snapRotation };
       cameraRig.setAttribute('rotation', snapRotation);
       if (data.rigX !== undefined) {
         cameraRig.setAttribute('position', { x: data.rigX, y: data.rigY, z: data.rigZ });
       }
-
-      if (!followExpert) {
-        followExpert = true;
-        const btn = document.getElementById('follow-btn');
-        btn.textContent = '👁 Following Expert';
-        btn.style.background = '#4CC3D9';
-      }
-
+      if (!followExpert) followExpert = true;
       snapFlash.classList.add('active');
       setTimeout(() => snapFlash.classList.remove('active'), 300);
-
       navigator.vibrate && navigator.vibrate([80, 50, 80]);
       playSnapSound();
-
-      status.textContent = '📌 View locked by expert';
+      setStatus('📌 View locked', 'locked');
     });
 
     socket.on('unlock-view', () => {
       viewLocked = false;
-      status.textContent = 'Receiving motion data';
+      setStatus('Following expert', 'connected');
     });
 
     socket.on('connect', () => {
-      console.log('Connected to server');
-      status.textContent = 'Connected - waiting for motion data';
+      setStatus('Connected', 'connected');
     });
 
     // --- Highlight ---
     function resetEngineColor() {
       const engine = document.querySelector('#engine');
       if (engine) engine.object3D.traverse(node => {
-        if (node.isMesh && node.userData.originalColor) {
-          node.material.color.copy(node.userData.originalColor);
-        }
+        if (node.isMesh && node.userData.originalColor) node.material.color.copy(node.userData.originalColor);
       });
     }
 
@@ -326,9 +389,7 @@
       const engine = document.querySelector('#engine');
       if (engine) engine.object3D.traverse(node => {
         if (node.isMesh) {
-          if (!node.userData.originalColor) {
-            node.userData.originalColor = node.material.color.clone();
-          }
+          if (!node.userData.originalColor) node.userData.originalColor = node.material.color.clone();
           node.material = node.material.clone();
           node.material.color.set('#FFFF00');
         }
@@ -336,43 +397,19 @@
     }
 
     socket.on('highlight', (data) => {
-      const objectId = data.object;
-
       resetEngineColor();
-
-      if (!objectId) {
-        status.textContent = 'Highlight cleared';
-        setTimeout(() => { status.textContent = followExpert ? 'Receiving motion data' : 'Exploring freely'; }, 2000);
+      if (!data.object) {
+        showToast('Highlight cleared', '#555', 1500);
         return;
       }
-
-      const object = document.querySelector(`#${objectId}`);
-
-      if (object) {
-        if (objectId === 'engine') {
-          highlightEngine();
-        }
-
-        navigator.vibrate && navigator.vibrate(100);
-        playHighlightSound();
-
-        status.textContent = `Highlighting: ${objectId}`;
-        setTimeout(() => {
-          status.textContent = followExpert ? 'Receiving motion data' : 'Exploring freely';
-        }, 2000);
-      }
+      if (data.object === 'engine') highlightEngine();
+      navigator.vibrate && navigator.vibrate(100);
+      playHighlightSound();
+      showToast(`Highlighting: ${data.object}`, '#4CC3D9', 2000);
     });
 
     // --- Explode/Assemble ---
     let clipDuration = null;
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const engine = document.querySelector('#engine');
-      engine.addEventListener('model-loaded', () => {
-        const clips = engine.object3D.animations;
-        if (clips && clips.length > 0) clipDuration = clips[0].duration;
-      });
-    });
 
     function playAnimation(forward) {
       const engine = document.querySelector('#engine');
@@ -391,7 +428,35 @@
     socket.on('explode-view', () => { navigator.vibrate && navigator.vibrate([50, 30, 50, 30, 100]); playExplodeSound(); playAnimation(true); });
     socket.on('assemble-view', () => { navigator.vibrate && navigator.vibrate(80); playAssembleSound(); playAnimation(false); });
 
-    // --- Pinch to zoom (move camera along look direction) ---
+    // --- Long press to toggle follow/explore ---
+    let longPressTimer = null;
+
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        longPressTimer = setTimeout(() => {
+          toggleFollow();
+          navigator.vibrate && navigator.vibrate(50);
+          longPressTimer = null;
+        }, 700);
+      } else {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    }, { passive: true });
+
+    // --- Pinch to zoom ---
     let lastPinchDist = null;
 
     function getPinchDist(touches) {
@@ -414,9 +479,7 @@
     }
 
     document.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 2) {
-        lastPinchDist = getPinchDist(e.touches);
-      }
+      if (e.touches.length === 2) lastPinchDist = getPinchDist(e.touches);
     }, { passive: true });
 
     document.addEventListener('touchmove', (e) => {
@@ -429,9 +492,7 @@
       }
     }, { passive: false });
 
-    document.addEventListener('touchend', () => {
-      if (lastPinchDist !== null) lastPinchDist = null;
-    });
+    document.addEventListener('touchend', () => { if (lastPinchDist !== null) lastPinchDist = null; });
   </script>
 </body>
 </html>
