@@ -140,7 +140,8 @@
     }
 
     function enterExperience() {
-      getAudioCtx();
+      const ctx = getAudioCtx();
+      ctx.resume();
       document.getElementById('enter-overlay').style.display = 'none';
       const camera = document.querySelector('a-camera');
       if (camera) camera.setAttribute('look-controls', 'enabled', true);
