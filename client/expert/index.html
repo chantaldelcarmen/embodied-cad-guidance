@@ -545,6 +545,16 @@
     }
 
     function resetView() {
+      // If locked, unlock first so viewer will accept the incoming motion-data reset
+      if (viewLocked) {
+        viewLocked = false;
+        const camera = document.querySelector('a-camera');
+        if (camera) camera.setAttribute('look-controls', 'enabled', true);
+        document.getElementById('explodeBtn').style.display = 'block';
+        stopOrbit();
+        document.getElementById('orbit-controls').classList.remove('visible');
+        socket.emit('unlock-view');
+      }
       // Reset rig position to origin
       if (cameraRig) {
         cameraRig.object3D.position.set(0, 1.6, 0);
@@ -562,6 +572,7 @@
       currentTilt = 0;
       // Sync viewer back to origin
       socket.emit('motion-data', { alpha: '0', beta: '0', gamma: '0', rigX: '0', rigY: '1.600', rigZ: '0' });
+      setStatus('Streaming', 'streaming');
       showToast('🏠 View reset', '#555');
     }
 
