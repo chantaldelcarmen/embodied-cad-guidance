@@ -37,6 +37,10 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("unlock-view");
   });
 
+  socket.on("reset-view", () => {
+    socket.broadcast.emit("reset-view");
+  });
+
   socket.on("explode-view", () => {
     console.log("explode-view received, broadcasting");
     socket.broadcast.emit("explode-view");
