@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Viewer - 3D Scene</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
   <style>
     body { margin: 0; overflow: hidden; }
     #ui-overlay {
@@ -81,9 +82,7 @@
     <a-light type="directional" color="#FFF" intensity="0.6" position="2 4 3"></a-light>
     <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" color="#7BC8A4"></a-plane>
 
-    <a-entity id="pipe" gltf-model="url(/assets/pipefitting.glb)" position="-19.220 1.460 -0.370" scale="0.020 0.020 0.020" rotation="90 0 0" class="clickable"></a-entity>
-    <a-cylinder id="cylinder" position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D"></a-cylinder>
-    <a-sphere id="sphere" position="-2 1.25 -3" radius="0.5" color="#EF2D5E"></a-sphere>
+    <a-entity id="engine" gltf-model="url(/assets/engine.glb)" position="-0.010 1.550 -3" scale="0.010 0.010 0.010" rotation="0 0 0" class="clickable"></a-entity>
 
     <a-entity id="camera-rig" position="0 1.6 0">
       <a-camera id="camera" position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -102,6 +101,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    const THREE = AFRAME.THREE;
     const status = document.getElementById('status');
     const dataDiv = document.getElementById('data');
     const snapFlash = document.getElementById('snap-flash');
@@ -278,35 +278,39 @@
     });
 
     // --- Highlight ---
-    const originalColors = {
-      cylinder: '#FFC65D',
-      sphere: '#EF2D5E'
-    };
+    function resetEngineColor() {
+      const engine = document.querySelector('#engine');
+      if (engine) engine.object3D.traverse(node => {
+        if (node.isMesh && node.userData.originalColor) {
+          node.material.color.copy(node.userData.originalColor);
+        }
+      });
+    }
+
+    function highlightEngine() {
+      const engine = document.querySelector('#engine');
+      if (engine) engine.object3D.traverse(node => {
+        if (node.isMesh) {
+          if (!node.userData.originalColor) {
+            node.userData.originalColor = node.material.color.clone();
+          }
+          node.material = node.material.clone();
+          node.material.color.set('#FFFF00');
+        }
+      });
+    }
 
     socket.on('highlight', (data) => {
       const objectId = data.object;
       const object = document.querySelector(`#${objectId}`);
 
       if (object) {
-        Object.keys(originalColors).forEach(id => {
-          const obj = document.querySelector(`#${id}`);
-          if (obj) obj.setAttribute('color', originalColors[id]);
-        });
-        const pipe = document.querySelector('#pipe');
-        if (pipe) pipe.object3D.traverse(node => { if (node.isMesh) node.material.color.set('#aaaaaa'); });
+        resetEngineColor();
 
-        if (objectId === 'pipe') {
-          object.object3D.traverse(node => {
-            if (node.isMesh) {
-              node.material = node.material.clone();
-              node.material.color.set('#FFFF00');
-            }
-          });
-        } else {
-          object.setAttribute('color', '#FFFF00');
+        if (objectId === 'engine') {
+          highlightEngine();
         }
 
-        // Sound feedback on highlight
         playHighlightSound();
 
         status.textContent = `Highlighting: ${objectId}`;
@@ -315,6 +319,34 @@
         }, 2000);
       }
     });
+
+    // --- Explode/Assemble ---
+    let clipDuration = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const engine = document.querySelector('#engine');
+      engine.addEventListener('model-loaded', () => {
+        const clips = engine.object3D.animations;
+        if (clips && clips.length > 0) clipDuration = clips[0].duration;
+      });
+    });
+
+    function playAnimation(forward) {
+      const engine = document.querySelector('#engine');
+      if (!engine) return;
+      if (engine.components['animation-mixer']) engine.removeAttribute('animation-mixer');
+      setTimeout(() => {
+        if (forward) {
+          engine.setAttribute('animation-mixer', 'clip: Take 001; loop: once; clampWhenFinished: true; timeScale: 1');
+        } else {
+          const dur = clipDuration || 2;
+          engine.setAttribute('animation-mixer', `clip: Take 001; loop: once; clampWhenFinished: true; timeScale: -1; startAt: ${dur}`);
+        }
+      }, 50);
+    }
+
+    socket.on('explode-view', () => { console.log('explode-view received'); playAnimation(true); });
+    socket.on('assemble-view', () => { console.log('assemble-view received'); playAnimation(false); });
   </script>
 </body>
 </html>

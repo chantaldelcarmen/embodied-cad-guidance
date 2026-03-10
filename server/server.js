@@ -37,6 +37,16 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("unlock-view");
   });
 
+  socket.on("explode-view", () => {
+    console.log("explode-view received, broadcasting");
+    socket.broadcast.emit("explode-view");
+  });
+
+  socket.on("assemble-view", () => {
+    console.log("assemble-view received, broadcasting");
+    socket.broadcast.emit("assemble-view");
+  });
+
   socket.on("disconnect", () => {
     console.log("client disconnected");
   });

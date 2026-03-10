@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Expert - Motion Capture</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -125,9 +127,7 @@
     <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" color="#7BC8A4"></a-plane>
 
     <!-- Interactive objects matching viewer -->
-    <a-entity id="pipe" gltf-model="url(/assets/pipefitting.glb)" position="-19.220 1.460 -0.370" scale="0.020 0.020 0.020" rotation="90 0 0" class="clickable"></a-entity>
-    <a-cylinder id="cylinder" position="2 0.75 -3" radius="0.5" height="1.5" color="#FFC65D" class="clickable"></a-cylinder>
-    <a-sphere id="sphere" position="-2 1.25 -3" radius="0.5" color="#EF2D5E" class="clickable"></a-sphere>
+    <a-entity id="engine" gltf-model="url(/assets/engine.glb)" position="-0.010 1.550 -3" scale="0.010 0.010 0.010" rotation="0 0 0" class="clickable"></a-entity>
   </a-scene>
 
   <!-- Start overlay -->
@@ -150,7 +150,8 @@
     <div class="controls" id="controls" style="display: none;">
       <!-- Lock View button -->
       <button id="lockViewBtn" onclick="lockView()">📌 Lock This View for Novice</button>
-
+      <!-- Explode/Assemble button -->
+      <button id="explodeBtn" onclick="toggleExplode()" style="margin-top: 8px; width: 100%; padding: 10px; background: #FF8C00; color: white; border: none; border-radius: 6px; font-family: monospace; font-size: 13px; cursor: pointer;">💥 Explode Assembly</button>
     </div>
 
     <div id="tap-hint" style="display: none;">👆 Tap objects to highlight | 📌 Lock view to teach</div>
@@ -159,6 +160,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    const THREE = AFRAME.THREE;
     const startBtn = document.getElementById('startBtn');
     const status = document.getElementById('status');
     const dataDiv = document.getElementById('data');
@@ -305,6 +307,44 @@
       }
     }
 
+    let exploded = false;
+    let clipDuration = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const engine = document.querySelector('#engine');
+      engine.addEventListener('model-loaded', () => {
+        const clips = engine.object3D.animations;
+        if (clips && clips.length > 0) clipDuration = clips[0].duration;
+      });
+    });
+
+    function toggleExplode() {
+      exploded = !exploded;
+      const btn = document.getElementById('explodeBtn');
+      if (exploded) {
+        socket.emit('explode-view');
+        btn.textContent = '🔧 Assemble';
+        btn.style.background = '#888';
+      } else {
+        socket.emit('assemble-view');
+        btn.textContent = '💥 Explode Assembly';
+        btn.style.background = '#FF8C00';
+      }
+      playAnimation(exploded);
+    }
+
+    function playAnimation(forward) {
+      const engine = document.querySelector('#engine');
+      if (!engine) return;
+      engine.removeAttribute('animation-mixer');
+      if (forward) {
+        engine.setAttribute('animation-mixer', 'clip: Take 001; loop: once; clampWhenFinished: true; timeScale: 1');
+      } else {
+        const dur = clipDuration || 2;
+        engine.setAttribute('animation-mixer', `clip: Take 001; loop: once; clampWhenFinished: true; timeScale: -1; startAt: ${dur}`);
+      }
+    }
+
     function setupRaycasting() {
       const clickables = document.querySelectorAll('.clickable');
       clickables.forEach(obj => {
@@ -319,22 +359,24 @@
 
       const object = document.querySelector(`#${objectId}`);
       if (object) {
+        // Reset all clickables
         document.querySelectorAll('.clickable').forEach(obj => {
-          const id = obj.getAttribute('id');
-          if (id === 'pipe') obj.object3D.traverse(node => { if (node.isMesh) node.material.color.set('#aaaaaa'); });
-          if (id === 'cylinder') obj.setAttribute('color', '#FFC65D');
-          if (id === 'sphere') obj.setAttribute('color', '#EF2D5E');
-        });
-        if (objectId === 'pipe') {
-          object.object3D.traverse(node => {
-            if (node.isMesh) {
-              node.material = node.material.clone();
-              node.material.color.set('#FFFF00');
+          obj.object3D.traverse(node => {
+            if (node.isMesh && node.userData.originalColor) {
+              node.material.color.copy(node.userData.originalColor);
             }
           });
-        } else {
-          object.setAttribute('color', '#FFFF00');
-        }
+        });
+        // Highlight selected
+        object.object3D.traverse(node => {
+          if (node.isMesh) {
+            if (!node.userData.originalColor) {
+              node.userData.originalColor = node.material.color.clone();
+            }
+            node.material = node.material.clone();
+            node.material.color.set('#FFFF00');
+          }
+        });
         status.textContent = `Highlighted ${objectId}`;
       }
 
