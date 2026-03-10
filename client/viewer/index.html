@@ -444,7 +444,7 @@
       const x = MODEL_CENTER.x + orbitRadius * Math.sin(phi) * cosTheta;
       const y = MODEL_CENTER.y + orbitRadius * Math.sin(theta);
       const z = MODEL_CENTER.z + orbitRadius * Math.cos(phi) * cosTheta;
-      cameraRig.object3D.position.set(x, y, z);
+      cameraRig.setAttribute('position', { x, y, z });
       const dist2d = Math.sqrt((MODEL_CENTER.x - x) ** 2 + (MODEL_CENTER.z - z) ** 2);
       const yawRad = Math.atan2(MODEL_CENTER.x - x, z - MODEL_CENTER.z);
       const pitchRad = Math.atan2(MODEL_CENTER.y - y, dist2d);
