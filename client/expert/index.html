@@ -453,7 +453,7 @@
         lastUpdate = now;
 
         if (headingDeg === null) return;
-        const rigPos = cameraRig ? cameraRig.getAttribute('position') : { x: 0, y: 1.6, z: 0 };
+        const rigPos = cameraRig ? cameraRig.object3D.position : { x: 0, y: 1.6, z: 0 };
         socket.emit('motion-data', {
           alpha: headingDeg.toFixed(1),
           beta: currentBeta.toFixed(1),
@@ -503,7 +503,7 @@
       viewLocked = !viewLocked;
       const camera = document.querySelector('a-camera');
       if (viewLocked) {
-        const rigPos = cameraRig ? cameraRig.getAttribute('position') : { x: 0, y: 1.6, z: 0 };
+        const rigPos = cameraRig ? cameraRig.object3D.position : { x: 0, y: 1.6, z: 0 };
         socket.emit('snap-view', { x: currentTilt, y: currentHeading, z: 0, rigX: rigPos.x, rigY: rigPos.y, rigZ: rigPos.z });
         navigator.vibrate && navigator.vibrate([150, 60, 150, 60, 150]);
         playSnapSound();
@@ -708,13 +708,9 @@
 
     function moveForward(amount) {
       if (!cameraRig) return;
-      const pos = cameraRig.getAttribute('position');
       const yaw = THREE.MathUtils.degToRad(currentHeading);
-      cameraRig.setAttribute('position', {
-        x: pos.x - Math.sin(yaw) * amount,
-        y: pos.y,
-        z: pos.z - Math.cos(yaw) * amount
-      });
+      cameraRig.object3D.position.x -= Math.sin(yaw) * amount;
+      cameraRig.object3D.position.z -= Math.cos(yaw) * amount;
     }
 
     document.addEventListener('touchstart', (e) => {
@@ -729,7 +725,7 @@
         lastPinchDist = dist;
         moveForward(delta * 0.008);
         if (cameraRig) {
-          const rigPos = cameraRig.getAttribute('position');
+          const rigPos = cameraRig.object3D.position;
           if (viewLocked) {
             socket.emit('view-update', { rigX: rigPos.x, rigY: rigPos.y, rigZ: rigPos.z });
           } else {
