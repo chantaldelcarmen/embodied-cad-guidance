@@ -395,6 +395,7 @@
           return;
         }
         if (e.changedTouches.length !== 1 || e.touches.length > 0) return;
+        if (e.target.closest('#bottom-controls')) return;
         const now = Date.now();
         if (now - lastTapTime < 300) {
           lockView();
@@ -479,12 +480,14 @@
       const engine = document.querySelector('#engine');
       if (!engine) return;
       engine.removeAttribute('animation-mixer');
-      if (forward) {
-        engine.setAttribute('animation-mixer', 'clip: Take 001; loop: once; clampWhenFinished: true; timeScale: 1');
-      } else {
-        const dur = clipDuration || 2;
-        engine.setAttribute('animation-mixer', `clip: Take 001; loop: once; clampWhenFinished: true; timeScale: -1; startAt: ${dur}`);
-      }
+      setTimeout(() => {
+        if (forward) {
+          engine.setAttribute('animation-mixer', 'clip: Take 001; loop: once; clampWhenFinished: true; timeScale: 1');
+        } else {
+          const dur = clipDuration || 2;
+          engine.setAttribute('animation-mixer', `clip: Take 001; loop: once; clampWhenFinished: true; timeScale: -1; startAt: ${dur}`);
+        }
+      }, 50);
     }
 
     // --- Scrub animation ---
