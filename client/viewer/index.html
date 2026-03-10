@@ -166,6 +166,31 @@
       oscillator.stop(ctx.currentTime + 0.3);
     }
 
+    function playExplodeSound() {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.5);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5);
+    }
+    function playAssembleSound() {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(200, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.3);
+    }
+
     // Distinct "snap" sound for lock view
     function playSnapSound() {
       const ctx = getAudioCtx();
@@ -363,8 +388,8 @@
       }, 50);
     }
 
-    socket.on('explode-view', () => { navigator.vibrate && navigator.vibrate([50, 30, 50, 30, 100]); playAnimation(true); });
-    socket.on('assemble-view', () => { navigator.vibrate && navigator.vibrate(80); playAnimation(false); });
+    socket.on('explode-view', () => { navigator.vibrate && navigator.vibrate([50, 30, 50, 30, 100]); playExplodeSound(); playAnimation(true); });
+    socket.on('assemble-view', () => { navigator.vibrate && navigator.vibrate(80); playAssembleSound(); playAnimation(false); });
 
     // --- Pinch to zoom (move camera along look direction) ---
     let lastPinchDist = null;
