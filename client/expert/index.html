@@ -359,22 +359,24 @@
 
       const object = document.querySelector(`#${objectId}`);
       if (object) {
+        // Reset all clickables
         document.querySelectorAll('.clickable').forEach(obj => {
-          const id = obj.getAttribute('id');
-          if (id === 'pipe') obj.object3D.traverse(node => { if (node.isMesh) node.material.color.set('#aaaaaa'); });
-          if (id === 'cylinder') obj.setAttribute('color', '#FFC65D');
-          if (id === 'sphere') obj.setAttribute('color', '#EF2D5E');
-        });
-        if (objectId === 'pipe') {
-          object.object3D.traverse(node => {
-            if (node.isMesh) {
-              node.material = node.material.clone();
-              node.material.color.set('#FFFF00');
+          obj.object3D.traverse(node => {
+            if (node.isMesh && node.userData.originalColor) {
+              node.material.color.copy(node.userData.originalColor);
             }
           });
-        } else {
-          object.setAttribute('color', '#FFFF00');
-        }
+        });
+        // Highlight selected
+        object.object3D.traverse(node => {
+          if (node.isMesh) {
+            if (!node.userData.originalColor) {
+              node.userData.originalColor = node.material.color.clone();
+            }
+            node.material = node.material.clone();
+            node.material.color.set('#FFFF00');
+          }
+        });
         status.textContent = `Highlighted ${objectId}`;
       }
 

@@ -278,35 +278,39 @@
     });
 
     // --- Highlight ---
-    const originalColors = {
-      cylinder: '#FFC65D',
-      sphere: '#EF2D5E'
-    };
+    function resetEngineColor() {
+      const engine = document.querySelector('#engine');
+      if (engine) engine.object3D.traverse(node => {
+        if (node.isMesh && node.userData.originalColor) {
+          node.material.color.copy(node.userData.originalColor);
+        }
+      });
+    }
+
+    function highlightEngine() {
+      const engine = document.querySelector('#engine');
+      if (engine) engine.object3D.traverse(node => {
+        if (node.isMesh) {
+          if (!node.userData.originalColor) {
+            node.userData.originalColor = node.material.color.clone();
+          }
+          node.material = node.material.clone();
+          node.material.color.set('#FFFF00');
+        }
+      });
+    }
 
     socket.on('highlight', (data) => {
       const objectId = data.object;
       const object = document.querySelector(`#${objectId}`);
 
       if (object) {
-        Object.keys(originalColors).forEach(id => {
-          const obj = document.querySelector(`#${id}`);
-          if (obj) obj.setAttribute('color', originalColors[id]);
-        });
-        const pipe = document.querySelector('#pipe');
-        if (pipe) pipe.object3D.traverse(node => { if (node.isMesh) node.material.color.set('#aaaaaa'); });
+        resetEngineColor();
 
-        if (objectId === 'pipe') {
-          object.object3D.traverse(node => {
-            if (node.isMesh) {
-              node.material = node.material.clone();
-              node.material.color.set('#FFFF00');
-            }
-          });
-        } else {
-          object.setAttribute('color', '#FFFF00');
+        if (objectId === 'engine') {
+          highlightEngine();
         }
 
-        // Sound feedback on highlight
         playHighlightSound();
 
         status.textContent = `Highlighting: ${objectId}`;
