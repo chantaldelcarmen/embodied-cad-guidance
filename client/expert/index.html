@@ -264,10 +264,14 @@
         if (viewLocked) return;
         lastUpdate = now;
 
+        const rigPos = cameraRig ? cameraRig.getAttribute('position') : { x: 0, y: 1.6, z: 0 };
         const data = {
           alpha: headingDeg.toFixed(1),
           beta: currentBeta.toFixed(1),
-          gamma: '0'
+          gamma: '0',
+          rigX: rigPos.x.toFixed(3),
+          rigY: rigPos.y.toFixed(3),
+          rigZ: rigPos.z.toFixed(3)
         };
 
         socket.emit('motion-data', data);
@@ -292,7 +296,8 @@
       const btn = document.getElementById('lockViewBtn');
       const camera = document.querySelector('a-camera');
       if (viewLocked) {
-        const snapData = { x: currentTilt, y: currentHeading, z: 0 };
+          const rigPos = cameraRig ? cameraRig.getAttribute('position') : { x: 0, y: 1.6, z: 0 };
+        const snapData = { x: currentTilt, y: currentHeading, z: 0, rigX: rigPos.x, rigY: rigPos.y, rigZ: rigPos.z };
         socket.emit('snap-view', snapData);
         btn.textContent = '🔓 Unlock View';
         btn.style.background = '#888';
@@ -344,6 +349,42 @@
         engine.setAttribute('animation-mixer', `clip: Take 001; loop: once; clampWhenFinished: true; timeScale: -1; startAt: ${dur}`);
       }
     }
+
+    // --- Pinch to zoom ---
+    let lastPinchDist = null;
+
+    function getPinchDist(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function moveForward(amount) {
+      if (!cameraRig) return;
+      const pos = cameraRig.getAttribute('position');
+      const yaw = THREE.MathUtils.degToRad(currentHeading);
+      cameraRig.setAttribute('position', {
+        x: pos.x - Math.sin(yaw) * amount,
+        y: pos.y,
+        z: pos.z - Math.cos(yaw) * amount
+      });
+    }
+
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) lastPinchDist = getPinchDist(e.touches);
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && lastPinchDist !== null) {
+        e.preventDefault();
+        const dist = getPinchDist(e.touches);
+        const delta = dist - lastPinchDist;
+        lastPinchDist = dist;
+        moveForward(delta * 0.008);
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => { lastPinchDist = null; });
 
     function setupRaycasting() {
       const clickables = document.querySelectorAll('.clickable');
