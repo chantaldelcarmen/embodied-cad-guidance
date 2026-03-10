@@ -46,7 +46,7 @@
       white-space: nowrap;
     }
 
-    /* Explode button — bottom center floating */
+    /* Bottom controls — bottom center floating */
     #bottom-controls {
       position: fixed;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
@@ -54,6 +54,7 @@
       transform: translateX(-50%);
       z-index: 1000;
       display: none;
+      gap: 12px;
     }
     #explodeBtn {
       padding: 14px 32px;
@@ -67,6 +68,18 @@
       -webkit-tap-highlight-color: transparent;
     }
     #explodeBtn:active { opacity: 0.8; }
+    #homeBtn {
+      padding: 14px 20px;
+      background: rgba(0,0,0,0.45);
+      color: white;
+      border: none;
+      border-radius: 30px;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+      -webkit-tap-highlight-color: transparent;
+    }
+    #homeBtn:active { opacity: 0.7; }
 
     /* Help modal */
     #help-modal {
@@ -255,6 +268,7 @@
   </div>
 
   <div id="bottom-controls">
+    <button id="homeBtn" onclick="resetView()">⌂</button>
     <button id="explodeBtn" onclick="toggleExplode()">💥 Explode</button>
   </div>
 
@@ -349,6 +363,15 @@
     let viewLocked = false;
     let clipDuration = null;
 
+    // Motion state (hoisted so resetView can access)
+    let headingDeg = null;
+    let initialBeta = null;
+    let initialAlpha = null;
+    let magHeading = null;
+    let currentBeta = 0;
+    let lastMotionTime = null;
+    let currentRotation = { x: 0, y: 0, z: 0 };
+
     document.addEventListener('DOMContentLoaded', () => {
       const scene = document.querySelector('a-scene');
       const init = () => { cameraRig = document.getElementById('camera-rig'); };
@@ -389,7 +412,7 @@
 
     function startListening() {
       document.getElementById('start-overlay').style.display = 'none';
-      document.getElementById('bottom-controls').style.display = 'block';
+      document.getElementById('bottom-controls').style.display = 'flex';
       document.getElementById('part-controls').classList.add('visible');
       document.getElementById('hints-btn').style.display = 'block';
       setStatus('Streaming', 'streaming');
@@ -397,16 +420,9 @@
 
       let lastUpdate = 0;
       const throttleDelay = 50;
-      let currentRotation = { x: 0, y: 0, z: 0 };
       const smoothingFactor = 0.3;
-      let headingDeg = null;
-      let lastMotionTime = null;
-      let magHeading = null;
-      let initialAlpha = null;
       const MAG_CORRECTION = 0.02;
       const MAG_FREEZE_THRESHOLD = 8;
-      let currentBeta = 0;
-      let initialBeta = null;
 
       window.addEventListener('deviceorientation', (event) => {
         if (initialBeta === null && event.beta !== null) {
@@ -516,6 +532,8 @@
         updateOrbitCamera();
         document.getElementById('orbit-controls').classList.add('visible');
       } else {
+        // Reset rig to origin on unlock so viewer doesn't get stranded at orbit position
+        if (cameraRig) cameraRig.object3D.position.set(0, 1.6, 0);
         socket.emit('unlock-view');
         setStatus('Streaming', 'streaming');
         showToast('🔓 Unlocked', '#555');
@@ -524,6 +542,27 @@
         stopOrbit();
         document.getElementById('orbit-controls').classList.remove('visible');
       }
+    }
+
+    function resetView() {
+      // Reset rig position to origin
+      if (cameraRig) {
+        cameraRig.object3D.position.set(0, 1.6, 0);
+        cameraRig.setAttribute('rotation', { x: 0, y: 0, z: 0 });
+      }
+      // Recalibrate heading and tilt
+      headingDeg = null;
+      initialBeta = null;
+      initialAlpha = null;
+      magHeading = null;
+      currentBeta = 0;
+      lastMotionTime = null;
+      currentRotation = { x: 0, y: 0, z: 0 };
+      currentHeading = 0;
+      currentTilt = 0;
+      // Sync viewer back to origin
+      socket.emit('motion-data', { alpha: '0', beta: '0', gamma: '0', rigX: '0', rigY: '1.600', rigZ: '0' });
+      showToast('🏠 View reset', '#555');
     }
 
     // --- Highlight ---
